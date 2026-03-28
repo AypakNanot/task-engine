@@ -1,0 +1,38 @@
+name: Stress Tests
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly on Sunday at 2:00 AM UTC
+
+jobs:
+  stress-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Run stress tests
+      run: mvn test -B -Dgroups=stress
+
+    - name: Upload stress test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: stress-test-results
+        path: target/surefire-reports/
+
+    - name: Test Summary
+      if: always()
+      run: |
+        echo "## Stress Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Tests completed at: $(date)" >> $GITHUB_STEP_SUMMARY

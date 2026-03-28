@@ -4,6 +4,7 @@ import com.aypak.taskengine.core.*;
 import com.aypak.taskengine.executor.TaskEngine;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Tests task isolation and concurrent processing across different task types.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Tag("stress")
 class TaskEngineMultiTaskParallelTest {
 
     @Autowired

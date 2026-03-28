@@ -4,6 +4,7 @@ import com.aypak.taskengine.core.*;
 import com.aypak.taskengine.executor.TaskEngine;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Tag("stress")
 class TaskEngineLongStressTest {
 
     @Autowired

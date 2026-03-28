@@ -1,0 +1,231 @@
+package com.aypak.taskengine.executor;
+
+import com.aypak.taskengine.config.TaskEngineProperties;
+import com.aypak.taskengine.core.*;
+import com.aypak.taskengine.monitor.TaskMetrics;
+import jakarta.annotation.PreDestroy;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Task Engine - main orchestrator for task management.
+ * Provides register/execute/getStats/updateConfig methods.
+ */
+@Slf4j
+@Getter
+public class TaskEngineImpl implements TaskEngine {
+
+    private final TaskRegistry registry;
+    private final TaskThreadPoolFactory poolFactory;
+    private final Map<String, TaskExecutor> executors = new ConcurrentHashMap<>();
+    private final TaskEngineProperties properties;
+    private final TaskExecutionLogger executionLogger;
+    private DynamicScaler scaler;
+
+    public TaskEngineImpl(TaskEngineProperties properties) {
+        this.properties = properties;
+        this.registry = new TaskRegistry();
+        this.poolFactory = new TaskThreadPoolFactory();
+        this.executionLogger = new TaskExecutionLogger();
+    }
+
+    public void setScaler(DynamicScaler scaler) {
+        this.scaler = scaler;
+    }
+
+    @Override
+    public <T> void register(TaskConfig config, ITaskProcessor<T> processor) {
+        config.validate();
+        String taskName = config.getTaskName();
+
+        if (registry.isRegistered(taskName)) {
+            throw new IllegalArgumentException("Task already registered: " + taskName);
+        }
+
+        TaskMetrics metrics = new TaskMetrics(taskName, config.getTaskType());
+        registry.registerWithMetrics(config, processor, metrics);
+
+        TaskExecutor executor = createExecutor(config, metrics);
+        executors.put(taskName, executor);
+
+        int maxPoolSize = config.getMaxPoolSize() != null
+                ? config.getMaxPoolSize()
+                : getDefaultMaxSize(config.getTaskType());
+        metrics.setPoolSizes(maxPoolSize, maxPoolSize);
+
+        log.info("Task registered: {} [type={}, priority={}]",
+                taskName, config.getTaskType(), config.getPriority());
+    }
+
+    private int getDefaultMaxSize(TaskType type) {
+        int cpuCount = Runtime.getRuntime().availableProcessors();
+        return switch (type) {
+            case INIT -> cpuCount;
+            case CRON -> 4;
+            case HIGH_FREQ -> cpuCount * 4;
+            case BACKGROUND -> 4;
+        };
+    }
+
+    private TaskExecutor createExecutor(TaskConfig config, TaskMetrics metrics) {
+        if (config.getTaskType() == TaskType.CRON) {
+            ThreadPoolTaskScheduler scheduler = poolFactory.createScheduler(config);
+            return new TaskExecutor(scheduler, config.getTaskName(), config.getTaskType(), metrics);
+        } else {
+            ThreadPoolTaskExecutor executor = poolFactory.createExecutor(config);
+            return new TaskExecutor(executor, config.getTaskName(), config.getTaskType(), metrics);
+        }
+    }
+
+    @Override
+    public <T> void execute(String taskName, T payload) {
+        TaskRegistry.TaskRegistration<?> registration = registry.getRegistration(taskName);
+        if (registration == null) {
+            throw new IllegalArgumentException("Task not registered: " + taskName);
+        }
+
+        TaskExecutor executor = executors.get(taskName);
+        if (executor == null) {
+            throw new IllegalStateException("Executor not found for task: " + taskName);
+        }
+
+        TaskMetrics metrics = registry.getMetrics(taskName);
+        if (metrics == null) {
+            throw new IllegalStateException("Metrics not found for task: " + taskName);
+        }
+
+        @SuppressWarnings("unchecked")
+        ITaskProcessor<T> processor = (ITaskProcessor<T>) registration.getProcessor();
+        TaskContext context = new TaskContext();
+        String traceId = MDC.get("traceId");
+
+        executor.execute(() -> {
+            long startTime = System.currentTimeMillis();
+            String execThreadName = Thread.currentThread().getName();
+
+            try {
+                executionLogger.logStart(taskName, execThreadName, traceId);
+                processor.process(payload);
+                processor.onSuccess(payload);
+
+                long executionMs = System.currentTimeMillis() - startTime;
+                double qps = metrics.calculateQps(properties.getQpsWindowSize());
+
+                executionLogger.logSuccess(taskName, execThreadName, executionMs,
+                        executor.getQueueSize(), executor.getQueueCapacity(), qps);
+                metrics.recordSuccess(executionMs);
+            } catch (Throwable e) {
+                metrics.recordFailure();
+                executionLogger.logFailure(taskName, execThreadName, e.getMessage(), traceId);
+                processor.onFailure(payload, e);
+                throw e;
+            }
+        }, context);
+
+        executor.updatePoolMetrics();
+    }
+
+    @Override
+    public Map<String, TaskMetrics> getStats() {
+        Map<String, TaskMetrics> stats = new HashMap<>();
+
+        for (Map.Entry<String, TaskExecutor> entry : executors.entrySet()) {
+            String taskName = entry.getKey();
+            TaskExecutor executor = entry.getValue();
+            TaskMetrics metrics = registry.getMetrics(taskName);
+
+            if (metrics != null) {
+                executor.updatePoolMetrics();
+                stats.put(taskName, metrics);
+            }
+        }
+
+        return stats;
+    }
+
+    @Override
+    public TaskMetrics getStats(String taskName) {
+        TaskExecutor executor = executors.get(taskName);
+        TaskMetrics metrics = registry.getMetrics(taskName);
+
+        if (executor != null && metrics != null) {
+            executor.updatePoolMetrics();
+        }
+
+        return metrics;
+    }
+
+    @Override
+    public void updateConfig(String taskName, DynamicConfig config) {
+        config.validate();
+
+        TaskExecutor executor = executors.get(taskName);
+        if (executor == null) {
+            throw new IllegalArgumentException("Task not found: " + taskName);
+        }
+
+        // Must set max before core to avoid IllegalArgumentException
+        if (config.getMaxPoolSize() != null && config.getMaxPoolSize() > 0) {
+            int oldSize = executor.getMaxPoolSize();
+            executor.setMaxPoolSize(config.getMaxPoolSize());
+            TaskMetrics metrics = registry.getMetrics(taskName);
+            if (metrics != null) {
+                metrics.updateCurrentMaxPoolSize(config.getMaxPoolSize());
+            }
+            executionLogger.logScaling(taskName, oldSize, config.getMaxPoolSize(), "manual update");
+        }
+        if (config.getCorePoolSize() != null && config.getCorePoolSize() > 0) {
+            executor.setCorePoolSize(config.getCorePoolSize());
+        }
+
+        log.info("Config updated for {}: core={}, max={}",
+                taskName, config.getCorePoolSize(), config.getMaxPoolSize());
+    }
+
+    @Override
+    public void resetMetrics(String taskName) {
+        TaskMetrics metrics = registry.getMetrics(taskName);
+        if (metrics != null) {
+            metrics.reset();
+            log.info("Metrics reset for: {}", taskName);
+        }
+    }
+
+    @Override
+    public void resetAllMetrics() {
+        registry.getAllMetrics().values().forEach(TaskMetrics::reset);
+        log.info("All metrics reset");
+    }
+
+    @Override
+    public Collection<TaskRegistry.TaskRegistration<?>> getAllRegistrations() {
+        return registry.getAllRegistrations();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        log.info("Task Engine shutting down gracefully...");
+
+        if (scaler != null) {
+            scaler.stop();
+        }
+
+        for (TaskExecutor executor : executors.values()) {
+            executor.shutdown(properties.getShutdownTimeout());
+        }
+
+        executors.clear();
+        registry.getAllRegistrations().forEach(r ->
+                registry.deregister(r.getConfig().getTaskName()));
+
+        log.info("Task Engine shutdown completed");
+    }
+}

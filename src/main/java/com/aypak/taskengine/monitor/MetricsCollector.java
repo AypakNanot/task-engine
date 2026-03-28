@@ -29,25 +29,10 @@ public class MetricsCollector {
 
         for (Map.Entry<String, TaskMetrics> entry : metrics.entrySet()) {
             String taskName = entry.getKey();
-            TaskMetrics m = entry.getValue();
             TaskExecutor executor = executors.get(taskName);
-
             int queueCapacity = executor != null ? executor.getQueueCapacity() : 0;
 
-            TaskStatsResponse response = new TaskStatsResponse();
-            response.setTaskName(m.getTaskName());
-            response.setTaskType(m.getTaskType().name());
-            response.setCurrentQps(m.calculateQps(properties.getQpsWindowSize()));
-            response.setAvgResponseTime(m.getAvgResponseTime());
-            response.setSuccessCount(m.getSuccessCount().sum());
-            response.setFailureCount(m.getFailureCount().sum());
-            response.setQueueDepth(m.getQueueDepth().get());
-            response.setActiveThreads(m.getActiveThreads().get());
-            response.setPeakThreads(m.getPeakThreads().get());
-            response.setCurrentMaxPoolSize(m.getCurrentMaxPoolSize().get());
-            response.calculateDerivedFields(queueCapacity);
-
-            snapshot.put(taskName, response);
+            snapshot.put(taskName, buildResponse(entry.getValue(), queueCapacity));
         }
 
         return snapshot;
@@ -62,6 +47,10 @@ public class MetricsCollector {
         TaskExecutor executor = taskEngine.getExecutors().get(taskName);
         int queueCapacity = executor != null ? executor.getQueueCapacity() : 0;
 
+        return buildResponse(m, queueCapacity);
+    }
+
+    private TaskStatsResponse buildResponse(TaskMetrics m, int queueCapacity) {
         TaskStatsResponse response = new TaskStatsResponse();
         response.setTaskName(m.getTaskName());
         response.setTaskType(m.getTaskType().name());
@@ -74,7 +63,6 @@ public class MetricsCollector {
         response.setPeakThreads(m.getPeakThreads().get());
         response.setCurrentMaxPoolSize(m.getCurrentMaxPoolSize().get());
         response.calculateDerivedFields(queueCapacity);
-
         return response;
     }
 }

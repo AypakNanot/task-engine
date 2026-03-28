@@ -5,12 +5,10 @@ import com.aypak.taskengine.core.TaskType;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.MDC;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -25,10 +23,8 @@ public class TaskExecutor {
     private final TaskType taskType;
     private final Executor executor;
     private final ThreadPoolExecutor threadPoolExecutor;
-    private final ScheduledThreadPoolExecutor scheduledExecutor;
     private final TaskMetrics metrics;
     private final ThreadPoolTaskScheduler scheduler;
-    private final ThreadPoolTaskExecutor taskExecutor;
 
     // Cached values to avoid repeated calculations
     private volatile int cachedQueueCapacity = 0;
@@ -38,21 +34,17 @@ public class TaskExecutor {
         this.taskType = taskType;
         this.executor = executor.getThreadPoolExecutor();
         this.threadPoolExecutor = executor.getThreadPoolExecutor();
-        this.scheduledExecutor = null;
         this.metrics = metrics;
         this.scheduler = null;
-        this.taskExecutor = executor;
     }
 
     public TaskExecutor(ThreadPoolTaskScheduler scheduler, String taskName, TaskType taskType, TaskMetrics metrics) {
         this.taskName = taskName;
         this.taskType = taskType;
         this.executor = scheduler.getScheduledExecutor();
-        this.threadPoolExecutor = null;
-        this.scheduledExecutor = (ScheduledThreadPoolExecutor) scheduler.getScheduledExecutor();
+        this.threadPoolExecutor = (ThreadPoolExecutor) scheduler.getScheduledExecutor();
         this.metrics = metrics;
         this.scheduler = scheduler;
-        this.taskExecutor = null;
     }
 
     /**
@@ -106,10 +98,7 @@ public class TaskExecutor {
     }
 
     private ThreadPoolExecutor getThreadPool() {
-        if (threadPoolExecutor != null) return threadPoolExecutor;
-        if (scheduledExecutor != null) return scheduledExecutor;
-        if (taskExecutor != null) return taskExecutor.getThreadPoolExecutor();
-        return null;
+        return threadPoolExecutor;
     }
 
     public int getQueueSize() {

@@ -58,27 +58,16 @@ public class QueueMonitor {
             if (queueCapacity > 0) {
                 double utilization = (queueDepth * 100.0) / queueCapacity;
 
-                // Get threshold from config or use default
-                int threshold = getThreshold(taskName);
-
-                if (utilization >= threshold) {
+                if (utilization >= defaultThreshold) {
                     log.warn("[{}] Queue depth: {} / {} ({}% > threshold {}%) ALERT",
                             taskName, queueDepth, queueCapacity,
-                            String.format("%.1f", utilization), threshold);
+                            String.format("%.1f", utilization), defaultThreshold);
                 } else {
                     log.debug("[{}] Queue depth: {} / {} ({:.1f}%)",
                             taskName, queueDepth, queueCapacity, utilization);
                 }
             }
         }
-    }
-
-    /**
-     * Get alert threshold for task (from config or default).
-     */
-    private int getThreshold(String taskName) {
-        // Default threshold - could be customized per task in future
-        return defaultThreshold;
     }
 
     /**

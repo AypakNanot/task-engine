@@ -1,8 +1,6 @@
 package com.aypak.taskengine.api;
 
 import com.aypak.taskengine.core.DynamicConfig;
-import com.aypak.taskengine.executor.TaskEngine;
-import com.aypak.taskengine.executor.TaskExecutor;
 import com.aypak.taskengine.executor.TaskEngineImpl;
 import com.aypak.taskengine.executor.TaskRegistry;
 import com.aypak.taskengine.monitor.MetricsCollector;
@@ -50,7 +48,6 @@ public class TaskMonitorController {
             @PathVariable String taskName,
             @RequestBody DynamicConfig config) {
         try {
-            config.validate();
             taskEngine.updateConfig(taskName, config);
             return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {

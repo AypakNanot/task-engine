@@ -113,10 +113,9 @@ public class DynamicScaler {
      */
     private boolean shouldScaleDown(int queueDepth, int queueCapacity, int activeThreads,
                                      int currentMax, TaskMetrics metrics) {
-        // Simple heuristic: if queue is near empty and threads are idle
         if (queueCapacity <= 0) return false;
 
-        double utilization = queueCapacity > 0 ? (queueDepth * 100.0) / queueCapacity : 0;
+        double utilization = (queueDepth * 100.0) / queueCapacity;
         int originalMax = metrics.getOriginalMaxPoolSize().get();
 
         return utilization < 20 && activeThreads < currentMax / 2 && currentMax > originalMax;

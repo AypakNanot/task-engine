@@ -4,6 +4,7 @@ import com.aypak.taskengine.core.*;
 import com.aypak.taskengine.executor.TaskEngine;
 import com.aypak.taskengine.monitor.TaskStatsResponse;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +24,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Simulates high-frequency task submission and monitors performance.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Tag("stress")
 class TaskEngineStressTest {
+
+    private static final String TASK_NAME = TaskEngineTestUtils.TASK_STRESS_TEST;
 
     @Autowired
     private TaskEngine taskEngine;
@@ -37,26 +40,24 @@ class TaskEngineStressTest {
 
     @BeforeEach
     void setup() {
-        try {
-            taskEngine.register(TaskConfig.builder()
-                    .taskName("StressTest")
-                    .taskType(TaskType.HIGH_FREQ)
-                    .priority(TaskPriority.HIGH)
-                    .corePoolSize(16)
-                    .maxPoolSize(32)
-                    .queueCapacity(10000)
-                    .queueAlertThreshold(80)
-                    .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
-                    .build(), new StressTaskProcessor());
-        } catch (IllegalArgumentException e) {
-            // Task already registered, ignore
-        }
+        TaskEngineTestUtils.registerTaskSafely(taskEngine, TaskConfig.builder()
+                .taskName(TASK_NAME)
+                .taskType(TaskType.HIGH_FREQ)
+                .priority(TaskPriority.HIGH)
+                .corePoolSize(16)
+                .maxPoolSize(32)
+                .queueCapacity(10000)
+                .queueAlertThreshold(80)
+                .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
+                .build(), new StressTaskProcessor());
     }
 
     @Test
     void stressTestHighFrequencyTasks() throws InterruptedException {
-        System.out.println("\n========== STRESS TEST START ==========");
-        System.out.println("Submitting " + TOTAL_TASKS + " tasks with " + CONCURRENT_THREADS + " concurrent threads");
+        TaskEngineTestUtils.printTestBanner("STRESS TEST", java.util.Map.of(
+                "Total Tasks", TOTAL_TASKS,
+                "Concurrent Threads", CONCURRENT_THREADS
+        ));
 
         ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_THREADS);
         CountDownLatch latch = new CountDownLatch(TOTAL_TASKS);
@@ -72,7 +73,7 @@ class TaskEngineStressTest {
             final int taskId = i;
             executor.submit(() -> {
                 try {
-                    taskEngine.execute("StressTest", new StressPayload(taskId, "data-" + taskId));
+                    taskEngine.execute(TASK_NAME, new StressPayload(taskId, "data-" + taskId));
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failureCount.incrementAndGet();
@@ -91,13 +92,13 @@ class TaskEngineStressTest {
         System.out.println("Success: " + successCount.get() + ", Failure: " + failureCount.get());
 
         // Wait for processing to complete
-        Thread.sleep(3000);
+        TaskEngineTestUtils.sleep(3000);
 
         // Print monitoring results
-        printMonitoringResults();
+        TaskEngineTestUtils.printMonitoringResults(restTemplate);
 
         // Verify results
-        var stats = taskEngine.getStats("StressTest");
+        var stats = taskEngine.getStats(TASK_NAME);
         assertNotNull(stats);
 
         System.out.println("\n========== STRESS TEST RESULTS ==========");
@@ -115,14 +116,17 @@ class TaskEngineStressTest {
 
     @Test
     void testQueuePressureAndScaling() throws InterruptedException {
-        System.out.println("\n========== QUEUE PRESSURE TEST ==========");
+        TaskEngineTestUtils.printTestBanner("QUEUE PRESSURE TEST", java.util.Map.of(
+                "Batches", 5,
+                "Tasks per Batch", 1000
+        ));
 
         // Submit tasks faster than they can be processed to trigger queue buildup
         ExecutorService executor = Executors.newFixedThreadPool(100);
 
         for (int batch = 0; batch < 5; batch++) {
             System.out.println("\n--- Batch " + (batch + 1) + " ---");
-            final int currentBatch = batch; // Make effectively final
+            final int currentBatch = batch;
             long batchStart = System.currentTimeMillis();
 
             // Submit 1000 tasks rapidly
@@ -130,72 +134,26 @@ class TaskEngineStressTest {
                 final int taskId = currentBatch * 1000 + i;
                 executor.submit(() -> {
                     try {
-                        taskEngine.execute("StressTest", new StressPayload(taskId, "batch-" + currentBatch));
+                        taskEngine.execute(TASK_NAME, new StressPayload(taskId, "batch-" + currentBatch));
                     } catch (Exception e) {
                         // Ignore
                     }
                 });
             }
 
-            Thread.sleep(500); // Brief pause between batches
+            TaskEngineTestUtils.sleep(500); // Brief pause between batches
 
             // Check queue depth
-            var stats = taskEngine.getStats("StressTest");
+            var stats = taskEngine.getStats(TASK_NAME);
             System.out.println("Queue depth: " + stats.getQueueDepth().get());
             System.out.println("Active threads: " + stats.getActiveThreads().get());
             System.out.println("Current max pool: " + stats.getCurrentMaxPoolSize().get());
         }
 
-        Thread.sleep(3000); // Wait for processing
-        printMonitoringResults();
+        TaskEngineTestUtils.sleep(3000); // Wait for processing
+        TaskEngineTestUtils.printMonitoringResults(restTemplate);
 
         executor.shutdown();
-    }
-
-    private void printMonitoringResults() {
-        System.out.println("\n========== MONITORING RESULTS ==========");
-
-        // Get stats via REST API
-        ResponseEntity<Map> response = restTemplate.getForEntity("/monitor/task/status", Map.class);
-
-        if (response.getBody() != null) {
-            Map<String, Object> stats = response.getBody();
-
-            System.out.println("\n┌─────────────────────────────────────────────────────────────────────────┐");
-            System.out.println("│                        TASK ENGINE MONITOR                              │");
-            System.out.println("├─────────────────────────────────────────────────────────────────────────┤");
-
-            for (Map.Entry<String, Object> entry : stats.entrySet()) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> taskStats = (Map<String, Object>) entry.getValue();
-
-                System.out.printf("│ Task: %-20s Type: %-10s                           │%n",
-                        entry.getKey(), taskStats.get("taskType"));
-                System.out.println("├─────────────────────────────────────────────────────────────────────────┤");
-
-                double qps = ((Number) taskStats.getOrDefault("currentQps", 0)).doubleValue();
-                long avgRt = ((Number) taskStats.getOrDefault("avgResponseTime", 0)).longValue();
-                long success = ((Number) taskStats.getOrDefault("successCount", 0)).longValue();
-                long failure = ((Number) taskStats.getOrDefault("failureCount", 0)).longValue();
-                int queueDepth = ((Number) taskStats.getOrDefault("queueDepth", 0)).intValue();
-                int activeThreads = ((Number) taskStats.getOrDefault("activeThreads", 0)).intValue();
-                int peakThreads = ((Number) taskStats.getOrDefault("peakThreads", 0)).intValue();
-                int maxPool = ((Number) taskStats.getOrDefault("currentMaxPoolSize", 0)).intValue();
-
-                System.out.printf("│   QPS: %-10.1f  Avg RT: %-6dms  Success: %-8d Failure: %-6d │%n",
-                        qps, avgRt, success, failure);
-                System.out.printf("│   Queue: %-5d  Active: %-4d  Peak: %-4d  MaxPool: %-4d           │%n",
-                        queueDepth, activeThreads, peakThreads, maxPool);
-                System.out.println("├─────────────────────────────────────────────────────────────────────────┤");
-            }
-
-            System.out.println("└─────────────────────────────────────────────────────────────────────────┘");
-        }
-
-        // Health check
-        ResponseEntity<Map> healthResponse = restTemplate.getForEntity("/actuator/health", Map.class);
-        System.out.println("\nHealth Status: " + (healthResponse.getBody() != null ?
-                healthResponse.getBody().get("status") : "UNKNOWN"));
     }
 
     // Stress test payload
@@ -206,7 +164,7 @@ class TaskEngineStressTest {
         private final AtomicLong counter = new AtomicLong(0);
 
         @Override
-        public String getTaskName() { return "StressTest"; }
+        public String getTaskName() { return TASK_NAME; }
 
         @Override
         public TaskType getTaskType() { return TaskType.HIGH_FREQ; }

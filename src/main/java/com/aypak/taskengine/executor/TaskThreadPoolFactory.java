@@ -96,33 +96,30 @@ public class TaskThreadPoolFactory {
     }
 
     private int getDefaultCoreSize(TaskType type) {
-        switch (type) {
-            case INIT: return 1;
-            case CRON: return 4;
-            case HIGH_FREQ: return CPU_COUNT * 2;
-            case BACKGROUND: return 2;
-            default: return 4;
-        }
+        return switch (type) {
+            case INIT -> 1;
+            case CRON -> 4;
+            case HIGH_FREQ -> CPU_COUNT * 2;
+            case BACKGROUND -> 2;
+        };
     }
 
     private int getDefaultMaxSize(TaskType type) {
-        switch (type) {
-            case INIT: return CPU_COUNT;
-            case CRON: return 4;
-            case HIGH_FREQ: return CPU_COUNT * 4;
-            case BACKGROUND: return 4;
-            default: return 4;
-        }
+        return switch (type) {
+            case INIT -> CPU_COUNT;
+            case CRON -> 4;
+            case HIGH_FREQ -> CPU_COUNT * 4;
+            case BACKGROUND -> 4;
+        };
     }
 
     private int getDefaultQueueCapacity(TaskType type) {
-        switch (type) {
-            case INIT: return 0;
-            case CRON: return 0;
-            case HIGH_FREQ: return 10000;
-            case BACKGROUND: return 100;
-            default: return 100;
-        }
+        return switch (type) {
+            case INIT -> 0;
+            case CRON -> 0;
+            case HIGH_FREQ -> 10000;
+            case BACKGROUND -> 100;
+        };
     }
 
     /**

@@ -9,11 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.ResponseEntity;
 
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -28,51 +25,48 @@ class TaskEngineLongStressTest {
 
     private static final long TEST_DURATION_MS = 15 * 60 * 1000;
     private static final int SUBMITTER_THREADS = 200;
+    private static final String TASK_NAME = TaskEngineTestUtils.TASK_LONG_STRESS;
+
+    private final int cpuCount = Runtime.getRuntime().availableProcessors();
 
     @BeforeEach
     void setup() {
-        try {
-            int cpuCount = Runtime.getRuntime().availableProcessors();
-            taskEngine.register(TaskConfig.builder()
-                    .taskName("LongStressTest")
-                    .taskType(TaskType.HIGH_FREQ)
-                    .priority(TaskPriority.HIGH)
-                    .corePoolSize(cpuCount * 8)
-                    .maxPoolSize(cpuCount * 16)
-                    .queueCapacity(100000)
-                    .queueAlertThreshold(95)
-                    .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
-                    .build(), new FastTaskProcessor());
-        } catch (IllegalArgumentException e) {
-            // Task already registered
-        }
+        TaskEngineTestUtils.registerTaskSafely(taskEngine, TaskConfig.builder()
+                .taskName(TASK_NAME)
+                .taskType(TaskType.HIGH_FREQ)
+                .priority(TaskPriority.HIGH)
+                .corePoolSize(cpuCount * 8)
+                .maxPoolSize(cpuCount * 16)
+                .queueCapacity(100000)
+                .queueAlertThreshold(95)
+                .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
+                .build(), new FastTaskProcessor());
     }
 
     @Test
     void fifteenMinuteLoadTest() throws InterruptedException {
-        System.out.println("\n================================================================================");
-        System.out.println("           TASK ENGINE - 15 MINUTE SUSTAINED LOAD TEST");
-        System.out.println("================================================================================");
-        System.out.println("Test Duration: " + (TEST_DURATION_MS / 1000 / 60) + " minutes");
-        System.out.println("Submitter Threads: " + SUBMITTER_THREADS);
-        System.out.println("Target QPS: 5000+");
-        System.out.println("================================================================================\n");
+        TaskEngineTestUtils.printTestBanner("15 MINUTE SUSTAINED LOAD TEST", java.util.Map.of(
+                "Test Duration", (TEST_DURATION_MS / 1000 / 60) + " minutes",
+                "Submitter Threads", SUBMITTER_THREADS,
+                "Target QPS", "5000+"
+        ));
 
-        ExecutorService executor = Executors.newFixedThreadPool(SUBMITTER_THREADS);
         AtomicLong totalSubmitted = new AtomicLong(0);
         AtomicLong totalSucceeded = new AtomicLong(0);
         AtomicLong totalFailed = new AtomicLong(0);
         AtomicLong peakQps = new AtomicLong(0);
         AtomicLong minQps = new AtomicLong(Long.MAX_VALUE);
 
-        boolean[] running = {true};
+        AtomicBoolean running = new AtomicBoolean(true);
         long startTime = System.currentTimeMillis();
 
         Thread reporter = new Thread(() -> {
             long lastCount = 0;
             long lastTime = startTime;
-            while (running[0]) {
-                try { Thread.sleep(10000); } catch (InterruptedException e) { break; }
+            while (running.get()) {
+                TaskEngineTestUtils.sleep(10000);
+                if (!running.get()) break;
+
                 long now = System.currentTimeMillis();
                 long currentCount = totalSucceeded.get();
                 long intervalCount = currentCount - lastCount;
@@ -87,7 +81,7 @@ class TaskEngineLongStressTest {
                 long min = elapsedSec / 60;
                 long sec = elapsedSec % 60;
 
-                TaskMetrics metrics = taskEngine.getStats("LongStressTest");
+                TaskMetrics metrics = taskEngine.getStats(TASK_NAME);
                 System.out.printf("[%02d:%02d] QPS: %6.0f | Overall: %6.0f | Submitted: %d | Success: %d | Failed: %d | Queue: %d | Active: %d%n",
                         min, sec, intervalQps, overallQps,
                         totalSubmitted.get(), currentCount, totalFailed.get(),
@@ -103,10 +97,10 @@ class TaskEngineLongStressTest {
             final int threadId = t;
             submitters[t] = new Thread(() -> {
                 int taskId = threadId * 1000000;
-                while (running[0]) {
+                while (running.get()) {
                     final int id = taskId++;
                     try {
-                        taskEngine.execute("LongStressTest", new TaskPayload(id, "load"));
+                        taskEngine.execute(TASK_NAME, new TaskPayload(id, "load"));
                         totalSubmitted.incrementAndGet();
                         totalSucceeded.incrementAndGet();
                     } catch (Exception e) {
@@ -120,16 +114,15 @@ class TaskEngineLongStressTest {
         for (Thread t : submitters) { t.start(); }
 
         System.out.println("Starting 15-minute load test...\n");
-        Thread.sleep(TEST_DURATION_MS);
+        TaskEngineTestUtils.sleep(TEST_DURATION_MS);
 
         System.out.println("\nStopping test...");
-        running[0] = false;
+        running.set(false);
         reporter.join(1000);
         for (Thread t : submitters) { t.join(1000); }
 
         System.out.println("Waiting for remaining tasks...");
-        Thread.sleep(5000);
-        executor.shutdown();
+        TaskEngineTestUtils.sleep(5000);
 
         long endTime = System.currentTimeMillis();
         long actualDuration = endTime - startTime;
@@ -138,8 +131,7 @@ class TaskEngineLongStressTest {
         long finalSubmitted = totalSubmitted.get();
         double overallQps = finalSuccess * 1000.0 / actualDuration;
         double submitRate = finalSubmitted * 1000.0 / actualDuration;
-        TaskMetrics finalMetrics = taskEngine.getStats("LongStressTest");
-        int cpuCount = Runtime.getRuntime().availableProcessors();
+        TaskMetrics finalMetrics = taskEngine.getStats(TASK_NAME);
 
         System.out.println("\n================================================================================");
         System.out.println("                        FINAL TEST RESULTS");
@@ -166,46 +158,18 @@ class TaskEngineLongStressTest {
         System.out.println("Final Queue Depth: " + finalMetrics.getQueueDepth().get());
         System.out.println("\n================================================================================");
 
-        printMonitoringResults();
+        TaskEngineTestUtils.printMonitoringResults(restTemplate);
     }
 
-    private void printMonitoringResults() {
-        System.out.println("\n--- REST API Monitoring Results ---");
-        ResponseEntity<Map> response = restTemplate.getForEntity("/monitor/task/status", Map.class);
-        if (response.getBody() != null) {
-            Map<String, Object> stats = response.getBody();
-            for (Map.Entry<String, Object> entry : stats.entrySet()) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> taskStats = (Map<String, Object>) entry.getValue();
-                System.out.println("\nTask: " + entry.getKey());
-                System.out.println("----------------------------------------");
-                System.out.println("  Current QPS: " + taskStats.get("currentQps"));
-                System.out.println("  Avg Response Time: " + taskStats.get("avgResponseTime") + " ms");
-                System.out.println("  Success Count: " + taskStats.get("successCount"));
-                System.out.println("  Failure Count: " + taskStats.get("failureCount"));
-                System.out.println("  Queue Depth: " + taskStats.get("queueDepth") + " / " + taskStats.get("queueCapacity"));
-                System.out.println("  Active Threads: " + taskStats.get("activeThreads"));
-                System.out.println("  Peak Threads: " + taskStats.get("peakThreads"));
-                System.out.println("  Max Pool Size: " + taskStats.get("currentMaxPoolSize"));
-            }
-        }
-        ResponseEntity<Map> health = restTemplate.getForEntity("/actuator/health", Map.class);
-        System.out.println("\nHealth Status: " + (health.getBody() != null ? health.getBody().get("status") : "UNKNOWN"));
-    }
-
-    static class TaskPayload {
-        final int id;
-        final String data;
-        TaskPayload(int id, String data) { this.id = id; this.data = data; }
-    }
+    record TaskPayload(int id, String data) {}
 
     static class FastTaskProcessor implements ITaskProcessor<TaskPayload> {
-        public String getTaskName() { return "LongStressTest"; }
+        public String getTaskName() { return TASK_NAME; }
         public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
         public TaskPriority getPriority() { return TaskPriority.HIGH; }
         public void process(TaskPayload payload) {
-            int sleepTime = (payload.id % 10 == 0) ? 2 : 1;
-            try { Thread.sleep(sleepTime); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            int sleepTime = (payload.id() % 10 == 0) ? 2 : 1;
+            TaskEngineTestUtils.sleep(sleepTime);
         }
     }
 }

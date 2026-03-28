@@ -25,7 +25,7 @@ public class TaskRegistry {
      *
      * @param config    task configuration
      * @param processor task processor implementation
-     * @param metrics   pre-created metrics
+     * @param metrics   pre-created metrics (if null, new metrics will be created)
      * @throws IllegalArgumentException if registration already exists
      */
     public <T> void registerWithMetrics(TaskConfig config, ITaskProcessor<T> processor, TaskMetrics metrics) {
@@ -37,6 +37,10 @@ public class TaskRegistry {
 
         TaskRegistration<T> registration = new TaskRegistration<>(config, processor);
         registrations.put(taskName, registration);
+
+        if (metrics == null) {
+            metrics = new TaskMetrics(taskName, config.getTaskType());
+        }
         this.metrics.put(taskName, metrics);
 
         log.info("Registered task: {} [type={}, priority={}]",
@@ -51,22 +55,7 @@ public class TaskRegistry {
      * @throws IllegalArgumentException if registration already exists
      */
     public <T> void register(TaskConfig config, ITaskProcessor<T> processor) {
-        config.validate();
-
-        String taskName = config.getTaskName();
-
-        if (registrations.containsKey(taskName)) {
-            throw new IllegalArgumentException("Task already registered: " + taskName);
-        }
-
-        TaskRegistration<T> registration = new TaskRegistration<>(config, processor);
-        registrations.put(taskName, registration);
-
-        TaskMetrics taskMetrics = new TaskMetrics(taskName, config.getTaskType());
-        metrics.put(taskName, taskMetrics);
-
-        log.info("Registered task: {} [type={}, priority={}]",
-                taskName, config.getTaskType(), config.getPriority());
+        registerWithMetrics(config, processor, null);
     }
 
     /**

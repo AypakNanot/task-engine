@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Task Engine - main orchestrator for task management.
- * Provides register/execute/getStats/updateConfig methods.
+ * Optimized for high-throughput with minimal overhead in hot path.
  */
 @Slf4j
 @Getter
@@ -27,14 +27,12 @@ public class TaskEngineImpl implements TaskEngine {
     private final TaskThreadPoolFactory poolFactory;
     private final Map<String, TaskExecutor> executors = new ConcurrentHashMap<>();
     private final TaskEngineProperties properties;
-    private final TaskExecutionLogger executionLogger;
     private DynamicScaler scaler;
 
     public TaskEngineImpl(TaskEngineProperties properties) {
         this.properties = properties;
         this.registry = new TaskRegistry();
         this.poolFactory = new TaskThreadPoolFactory();
-        this.executionLogger = new TaskExecutionLogger();
     }
 
     public void setScaler(DynamicScaler scaler) {
@@ -85,6 +83,10 @@ public class TaskEngineImpl implements TaskEngine {
         }
     }
 
+    /**
+     * Execute task - optimized for high throughput.
+     * Minimal overhead in hot path: no logging, no unnecessary calculations.
+     */
     @Override
     public <T> void execute(String taskName, T payload) {
         TaskRegistry.TaskRegistration<?> registration = registry.getRegistration(taskName);
@@ -104,33 +106,36 @@ public class TaskEngineImpl implements TaskEngine {
 
         @SuppressWarnings("unchecked")
         ITaskProcessor<T> processor = (ITaskProcessor<T>) registration.getProcessor();
-        TaskContext context = new TaskContext();
+
+        // Capture context once
         String traceId = MDC.get("traceId");
+        Map<String, String> mdcContext = MDC.getCopyOfContextMap();
+        TaskContext context = new TaskContext(traceId, mdcContext, System.currentTimeMillis());
 
         executor.execute(() -> {
-            long startTime = System.currentTimeMillis();
-            String execThreadName = Thread.currentThread().getName();
-
             try {
-                executionLogger.logStart(taskName, execThreadName, traceId);
+                // Propagate MDC context
+                if (mdcContext != null && !mdcContext.isEmpty()) {
+                    MDC.setContextMap(mdcContext);
+                }
+
+                // Execute task
                 processor.process(payload);
+
+                // Success callback (only if overridden)
                 processor.onSuccess(payload);
-
-                long executionMs = System.currentTimeMillis() - startTime;
-                double qps = metrics.calculateQps(properties.getQpsWindowSize());
-
-                executionLogger.logSuccess(taskName, execThreadName, executionMs,
-                        executor.getQueueSize(), executor.getQueueCapacity(), qps);
-                metrics.recordSuccess(executionMs);
             } catch (Throwable e) {
                 metrics.recordFailure();
-                executionLogger.logFailure(taskName, execThreadName, e.getMessage(), traceId);
+                // Only log at debug level to reduce overhead
+                if (log.isDebugEnabled()) {
+                    log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), e.getMessage());
+                }
                 processor.onFailure(payload, e);
                 throw e;
+            } finally {
+                MDC.clear();
             }
         }, context);
-
-        executor.updatePoolMetrics();
     }
 
     @Override
@@ -172,7 +177,6 @@ public class TaskEngineImpl implements TaskEngine {
             throw new IllegalArgumentException("Task not found: " + taskName);
         }
 
-        // Must set max before core to avoid IllegalArgumentException
         if (config.getMaxPoolSize() != null && config.getMaxPoolSize() > 0) {
             int oldSize = executor.getMaxPoolSize();
             executor.setMaxPoolSize(config.getMaxPoolSize());
@@ -180,14 +184,11 @@ public class TaskEngineImpl implements TaskEngine {
             if (metrics != null) {
                 metrics.updateCurrentMaxPoolSize(config.getMaxPoolSize());
             }
-            executionLogger.logScaling(taskName, oldSize, config.getMaxPoolSize(), "manual update");
+            log.info("[{}] Pool scaling: {} -> {} (manual)", taskName, oldSize, config.getMaxPoolSize());
         }
         if (config.getCorePoolSize() != null && config.getCorePoolSize() > 0) {
             executor.setCorePoolSize(config.getCorePoolSize());
         }
-
-        log.info("Config updated for {}: core={}, max={}",
-                taskName, config.getCorePoolSize(), config.getMaxPoolSize());
     }
 
     @Override

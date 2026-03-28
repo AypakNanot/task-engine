@@ -104,8 +104,8 @@ class TaskEngineStressTest {
         System.out.println("Total submitted: " + TOTAL_TASKS);
         System.out.println("Submit time: " + submitTime + "ms");
         System.out.println("Submit rate: " + String.format("%.0f", TOTAL_TASKS * 1000.0 / submitTime) + " tasks/sec");
-        System.out.println("Success count: " + stats.getSuccessCount().get());
-        System.out.println("Failure count: " + stats.getFailureCount().get());
+        System.out.println("Success count: " + stats.getSuccessCount().sum());
+        System.out.println("Failure count: " + stats.getFailureCount().sum());
         System.out.println("Avg response time: " + stats.getAvgResponseTime() + "ms");
         System.out.println("==========================================\n");
 

@@ -5,10 +5,11 @@ import lombok.Getter;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
- * Thread-safe task metrics container.
- * All counters use atomic operations for concurrent updates.
+ * High-performance thread-safe task metrics container.
+ * Uses LongAdder for high-contention counters and AtomicLong for single-writer values.
  */
 @Getter
 public class TaskMetrics {
@@ -16,20 +17,22 @@ public class TaskMetrics {
     private final String taskName;
     private final TaskType taskType;
 
-    // Execution counters
-    private final AtomicLong successCount = new AtomicLong(0);
-    private final AtomicLong failureCount = new AtomicLong(0);
-    private final AtomicLong totalExecutionTimeMs = new AtomicLong(0);
+    // High-contention counters - use LongAdder for better performance
+    private final LongAdder successCount = new LongAdder();
+    private final LongAdder failureCount = new LongAdder();
+    private final LongAdder executionsInWindow = new LongAdder();
+
+    // Total execution time for average calculation
+    private final LongAdder totalExecutionTimeMs = new LongAdder();
 
     // QPS tracking (sliding window)
-    private final AtomicLong executionsInWindow = new AtomicLong(0);
     private final AtomicLong windowStartTime = new AtomicLong(System.currentTimeMillis());
 
-    // EWMA for average response time
+    // EWMA for average response time - single writer per task, AtomicLong is fine
     private final AtomicLong ewmaResponseTime = new AtomicLong(0);
     private static final double EWMA_ALPHA = 0.3;
 
-    // Pool state
+    // Pool state - relatively low contention
     private final AtomicInteger queueDepth = new AtomicInteger(0);
     private final AtomicInteger activeThreads = new AtomicInteger(0);
     private final AtomicInteger peakThreads = new AtomicInteger(0);
@@ -42,14 +45,14 @@ public class TaskMetrics {
     }
 
     /**
-     * Record successful execution.
+     * Record successful execution - optimized for high throughput.
      *
      * @param executionTimeMs execution duration in milliseconds
      */
     public void recordSuccess(long executionTimeMs) {
-        successCount.incrementAndGet();
-        totalExecutionTimeMs.addAndGet(executionTimeMs);
-        executionsInWindow.incrementAndGet();
+        successCount.increment();
+        totalExecutionTimeMs.add(executionTimeMs);
+        executionsInWindow.increment();
         updateEwma(executionTimeMs);
     }
 
@@ -57,12 +60,12 @@ public class TaskMetrics {
      * Record failed execution.
      */
     public void recordFailure() {
-        failureCount.incrementAndGet();
-        executionsInWindow.incrementAndGet();
+        failureCount.increment();
+        executionsInWindow.increment();
     }
 
     /**
-     * Update EWMA for average response time.
+     * Update EWMA for average response time - lock-free.
      */
     private void updateEwma(long newValue) {
         long current = ewmaResponseTime.get();
@@ -83,7 +86,7 @@ public class TaskMetrics {
 
         if (windowDuration >= windowSizeMs) {
             // Reset window
-            long executions = executionsInWindow.getAndSet(0);
+            long executions = executionsInWindow.sumThenReset();
             windowStartTime.set(now);
             if (windowDuration > 0) {
                 return executions * 1000.0 / windowDuration;
@@ -93,7 +96,7 @@ public class TaskMetrics {
 
         // Return current window QPS
         if (windowDuration > 0) {
-            return executionsInWindow.get() * 1000.0 / windowDuration;
+            return executionsInWindow.sum() * 1000.0 / windowDuration;
         }
         return 0;
     }
@@ -126,7 +129,7 @@ public class TaskMetrics {
     private void updatePeak(int current) {
         int peak = peakThreads.get();
         if (current > peak) {
-            peakThreads.set(current);
+            peakThreads.compareAndSet(peak, current);
         }
     }
 
@@ -150,19 +153,23 @@ public class TaskMetrics {
      * Reset all metrics to zero.
      */
     public void reset() {
-        successCount.set(0);
-        failureCount.set(0);
-        totalExecutionTimeMs.set(0);
-        executionsInWindow.set(0);
+        successCount.reset();
+        failureCount.reset();
+        totalExecutionTimeMs.reset();
+        executionsInWindow.reset();
         windowStartTime.set(System.currentTimeMillis());
         ewmaResponseTime.set(0);
-        peakThreads.set(activeThreads.get()); // Peak reset to current
+        peakThreads.set(activeThreads.get());
     }
 
     /**
      * Get total task count (success + failure).
      */
     public long getTotalCount() {
-        return successCount.get() + failureCount.get();
+        return successCount.sum() + failureCount.sum();
     }
+
+    // Getter methods that return long for LongAdder
+    public LongAdder getSuccessCount() { return successCount; }
+    public LongAdder getFailureCount() { return failureCount; }
 }

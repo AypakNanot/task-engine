@@ -39,8 +39,8 @@ public class MetricsCollector {
             response.setTaskType(m.getTaskType().name());
             response.setCurrentQps(m.calculateQps(properties.getQpsWindowSize()));
             response.setAvgResponseTime(m.getAvgResponseTime());
-            response.setSuccessCount(m.getSuccessCount().get());
-            response.setFailureCount(m.getFailureCount().get());
+            response.setSuccessCount(m.getSuccessCount().sum());
+            response.setFailureCount(m.getFailureCount().sum());
             response.setQueueDepth(m.getQueueDepth().get());
             response.setActiveThreads(m.getActiveThreads().get());
             response.setPeakThreads(m.getPeakThreads().get());
@@ -67,8 +67,8 @@ public class MetricsCollector {
         response.setTaskType(m.getTaskType().name());
         response.setCurrentQps(m.calculateQps(properties.getQpsWindowSize()));
         response.setAvgResponseTime(m.getAvgResponseTime());
-        response.setSuccessCount(m.getSuccessCount().get());
-        response.setFailureCount(m.getFailureCount().get());
+        response.setSuccessCount(m.getSuccessCount().sum());
+        response.setFailureCount(m.getFailureCount().sum());
         response.setQueueDepth(m.getQueueDepth().get());
         response.setActiveThreads(m.getActiveThreads().get());
         response.setPeakThreads(m.getPeakThreads().get());

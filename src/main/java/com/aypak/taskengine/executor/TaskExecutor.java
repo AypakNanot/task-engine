@@ -5,6 +5,7 @@ import com.aypak.taskengine.core.TaskType;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -14,7 +15,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Wrapper around thread pool with metrics collection and context propagation.
+ * Optimized wrapper around thread pool with minimal overhead in hot path.
  */
 @Slf4j
 @Getter
@@ -28,6 +29,9 @@ public class TaskExecutor {
     private final TaskMetrics metrics;
     private final ThreadPoolTaskScheduler scheduler;
     private final ThreadPoolTaskExecutor taskExecutor;
+
+    // Cached values to avoid repeated calculations
+    private volatile int cachedQueueCapacity = 0;
 
     public TaskExecutor(ThreadPoolTaskExecutor executor, String taskName, TaskType taskType, TaskMetrics metrics) {
         this.taskName = taskName;
@@ -45,43 +49,54 @@ public class TaskExecutor {
         this.taskType = taskType;
         this.executor = scheduler.getScheduledExecutor();
         this.threadPoolExecutor = null;
-        // ScheduledThreadPoolExecutor extends ThreadPoolExecutor, safe cast
         this.scheduledExecutor = (ScheduledThreadPoolExecutor) scheduler.getScheduledExecutor();
         this.metrics = metrics;
         this.scheduler = scheduler;
         this.taskExecutor = null;
     }
 
+    /**
+     * Execute task with minimal overhead - optimized for high throughput.
+     */
     public void execute(Runnable runnable, TaskContext context) {
         Runnable wrapped = wrapWithContextPropagation(runnable, context);
 
         executor.execute(() -> {
-            long startTime = System.currentTimeMillis();
+            long startTime = System.nanoTime(); // Use nanoTime for better precision
             try {
                 wrapped.run();
-                metrics.recordSuccess(System.currentTimeMillis() - startTime);
+                long executionNs = System.nanoTime() - startTime;
+                metrics.recordSuccess(executionNs / 1_000_000); // Convert to ms
             } catch (Throwable e) {
                 metrics.recordFailure();
-                log.error("[{}] Task failed: {} - {}",
-                        Thread.currentThread().getName(), taskName, e.getMessage(), e);
+                // Only log failures at WARN level
+                log.warn("[{}] Task failed: {}", Thread.currentThread().getName(), e.getMessage());
                 throw e;
             }
         });
-
-        updatePoolMetrics();
     }
 
+    /**
+     * Lighter context propagation without object creation overhead.
+     */
     private Runnable wrapWithContextPropagation(Runnable runnable, TaskContext context) {
         return () -> {
             try {
-                context.propagate();
+                if (context != null) {
+                    context.propagate();
+                }
                 runnable.run();
             } finally {
-                context.clear();
+                if (context != null) {
+                    context.clear();
+                }
             }
         };
     }
 
+    /**
+     * Batch update pool metrics - call periodically, not per-task.
+     */
     public void updatePoolMetrics() {
         ThreadPoolExecutor pool = getThreadPool();
         if (pool != null) {
@@ -103,11 +118,17 @@ public class TaskExecutor {
     }
 
     public int getQueueCapacity() {
+        // Return cached value if available
+        if (cachedQueueCapacity > 0) {
+            return cachedQueueCapacity;
+        }
+
         ThreadPoolExecutor pool = getThreadPool();
         if (pool != null) {
             int size = pool.getQueue().size();
             int remaining = pool.getQueue().remainingCapacity();
-            return size + remaining;
+            cachedQueueCapacity = size + remaining;
+            return cachedQueueCapacity;
         }
         return 0;
     }
@@ -149,7 +170,6 @@ public class TaskExecutor {
     public void setCorePoolSize(int size) {
         ThreadPoolExecutor pool = getThreadPool();
         if (pool != null) {
-            // Ensure core <= max
             if (size > pool.getMaximumPoolSize()) {
                 pool.setMaximumPoolSize(size);
             }
@@ -161,12 +181,12 @@ public class TaskExecutor {
     public void setMaxPoolSize(int size) {
         ThreadPoolExecutor pool = getThreadPool();
         if (pool != null) {
-            // Ensure max >= core
             if (size < pool.getCorePoolSize()) {
                 pool.setCorePoolSize(size);
             }
             pool.setMaximumPoolSize(size);
             metrics.updateCurrentMaxPoolSize(size);
+            cachedQueueCapacity = 0; // Reset cache
             log.info("[{}] Max pool size changed to {}", taskName, size);
         }
     }

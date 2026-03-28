@@ -77,7 +77,7 @@ class TaskEngineIntegrationTests {
 
         var stats = taskEngine.getStats("HighFreqAlert");
         assertNotNull(stats);
-        assertTrue(stats.getSuccessCount().get() >= 10);
+        assertTrue(stats.getSuccessCount().sum() >= 10);
     }
 
     @Test
@@ -124,7 +124,7 @@ class TaskEngineIntegrationTests {
         taskEngine.resetMetrics("HighFreqAlert");
 
         var stats = taskEngine.getStats("HighFreqAlert");
-        assertEquals(0, stats.getSuccessCount().get());
+        assertEquals(0, stats.getSuccessCount().sum());
     }
 
     // Test Processors

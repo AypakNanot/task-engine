@@ -76,20 +76,20 @@ public class AlarmEngineImpl implements AlarmEngine {
     public AlarmEngineImpl(DataSource dataSource, String insertSql,
                           int workerCount, int workerQueueCapacity,
                           int receiverQueueCapacity, RejectPolicy rejectPolicy) {
+        // 创建批量数据库执行器（必须在 createPipelineNodes 之前创建）
+        this.dbExecutor = new BatchDBExecutor(dataSource, insertSql);
+
+        // 创建告警指标（必须在 ShardDispatcher 之前创建）
+        this.metrics = new AlarmMetrics();
+
         // 创建流水线节点列表
-        List<PipelineNode> nodes = createPipelineNodes(dataSource, insertSql);
+        List<PipelineNode> nodes = createPipelineNodes();
 
         // 创建告警接收器
         this.receiver = new AlarmReceiver(receiverQueueCapacity, rejectPolicy);
 
         // 创建分片调度器
-        this.dispatcher = new ShardDispatcher(workerCount, workerQueueCapacity, nodes, rejectPolicy);
-
-        // 创建批量数据库执行器
-        this.dbExecutor = new BatchDBExecutor(dataSource, insertSql);
-
-        // 创建告警指标
-        this.metrics = new AlarmMetrics();
+        this.dispatcher = new ShardDispatcher(workerCount, workerQueueCapacity, nodes, rejectPolicy, metrics);
 
         // 创建监控任务
         this.monitorTask = new MonitorTask(metrics, receiver, dispatcher);
@@ -104,7 +104,7 @@ public class AlarmEngineImpl implements AlarmEngine {
     /**
      * 创建流水线节点列表
      */
-    private List<PipelineNode> createPipelineNodes(DataSource dataSource, String insertSql) {
+    private List<PipelineNode> createPipelineNodes() {
         List<PipelineNode> nodes = new ArrayList<>(9);
 
         // 1. ReceiveNode - 接收节点
@@ -178,17 +178,7 @@ public class AlarmEngineImpl implements AlarmEngine {
         // 记录进入指标
         metrics.recordIncoming();
 
-        // 提交到接收器
-        boolean accepted = receiver.receive(event);
-
-        if (!accepted) {
-            // 记录丢弃指标
-            metrics.recordDropped();
-            return false;
-        }
-
-        // 从接收器轮询并提交到分片调度器
-        // 注意：这里采用直接分发模式，receiver 只作为背压控制
+        // 直接提交到分片调度器，receiver 仅用于监控指标
         return dispatcher.submit(event);
     }
 

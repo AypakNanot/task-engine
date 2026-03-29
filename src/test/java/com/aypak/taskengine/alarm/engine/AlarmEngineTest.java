@@ -75,6 +75,38 @@ class AlarmEngineTest {
         engine.shutdown();
     }
 
+    @Test
+    void testSubmitAndProcess() throws InterruptedException {
+        // 给定
+        TestDataSource dataSource = new TestDataSource();
+        AlarmEngineImpl engine = new AlarmEngineImpl(dataSource, "INSERT INTO test VALUES (?, ?)");
+        engine.start();
+
+        // 当：提交 10 个告警
+        int submitCount = 10;
+        for (int i = 0; i < submitCount; i++) {
+            AlarmEvent event = createTestEvent();
+            boolean accepted = engine.submit(event);
+            assertTrue(accepted, "Event " + i + " should be accepted");
+        }
+
+        // 等待处理完成
+        Thread.sleep(3000);
+
+        // 获取指标
+        var metrics = engine.getMetrics().getSnapshot();
+        System.out.println("Success count: " + metrics.successCount);
+        System.out.println("Failure count: " + metrics.failureCount);
+        System.out.println("Dropped count: " + metrics.droppedCount);
+
+        // 清理
+        engine.shutdown();
+
+        // 验证：告警应该被处理（成功或失败）
+        assertTrue(metrics.successCount > 0 || metrics.failureCount > 0,
+                "Events should be processed (success or failure), but got success=0, failure=0");
+    }
+
     /**
      * 创建测试告警事件
      */

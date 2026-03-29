@@ -163,12 +163,15 @@ public class BatchDBExecutor {
             return;
         }
 
+        // 创建防御性副本，避免并发修改
+        List<AlarmEvent> eventsCopy = new ArrayList<>(events);
+
         long startTime = System.currentTimeMillis();
         BatchResult result = BatchResult.success(0, 0);
 
         try {
-            result = executeBatch(events);
-            queue.markFlushed(events.size());
+            result = executeBatch(eventsCopy);
+            queue.markFlushed(eventsCopy.size());
             lastFlushTime = System.currentTimeMillis();
 
             // 更新统计
@@ -178,16 +181,16 @@ public class BatchDBExecutor {
             totalLatency.addAndGet(latency);
 
             if (log.isDebugEnabled()) {
-                log.debug("Batch flush completed: {} events in {}ms", events.size(), latency);
+                log.debug("Batch flush completed: {} events in {}ms", eventsCopy.size(), latency);
             }
 
         } catch (SQLException e) {
             failureCount.increment();
             log.error("Batch insert failed", e);
-            result = BatchResult.failure(events.size(), e);
+            result = BatchResult.failure(eventsCopy.size(), e);
 
             // 重试逻辑：降级为单条插入
-            retrySingleInserts(events);
+            retrySingleInserts(eventsCopy);
         } finally {
             // 通知回调
             if (resultCallback != null) {

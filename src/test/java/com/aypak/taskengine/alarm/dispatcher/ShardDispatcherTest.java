@@ -3,6 +3,7 @@ package com.aypak.taskengine.alarm.dispatcher;
 import com.aypak.taskengine.alarm.core.AlarmEvent;
 import com.aypak.taskengine.alarm.core.PipelineNode;
 import com.aypak.taskengine.alarm.core.RejectPolicy;
+import com.aypak.taskengine.alarm.monitor.AlarmMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,17 +20,19 @@ class ShardDispatcherTest {
 
     private ShardDispatcher dispatcher;
     private List<PipelineNode> nodes;
+    private AlarmMetrics metrics;
 
     @BeforeEach
     void setUp() {
         nodes = new ArrayList<>();
+        metrics = new AlarmMetrics();
         // 使用空节点列表进行测试
     }
 
     @Test
     void testSameDeviceIdRoutesToSameWorker() {
         // 给定 3 个 Worker
-        dispatcher = new ShardDispatcher(3, 1000, nodes, RejectPolicy.DROP);
+        dispatcher = new ShardDispatcher(3, 1000, nodes, RejectPolicy.DROP, metrics);
 
         // 同一 DeviceID
         String deviceId = "device-001";
@@ -47,7 +50,7 @@ class ShardDispatcherTest {
     @Test
     void testDifferentDeviceIdRoutesToDifferentWorkers() {
         // 给定 16 个 Worker
-        dispatcher = new ShardDispatcher(16, 1000, nodes, RejectPolicy.DROP);
+        dispatcher = new ShardDispatcher(16, 1000, nodes, RejectPolicy.DROP, metrics);
 
         // 不同 DeviceID
         String device1 = "device-001";
@@ -107,7 +110,7 @@ class ShardDispatcherTest {
         RejectPolicy policy = RejectPolicy.DROP;
 
         // 当
-        dispatcher = new ShardDispatcher(workerCount, queueCapacity, nodes, policy);
+        dispatcher = new ShardDispatcher(workerCount, queueCapacity, nodes, policy, metrics);
 
         // 则
         assertNotNull(dispatcher);
@@ -119,7 +122,7 @@ class ShardDispatcherTest {
     void testStartCreatesWorkers() {
         // 给定
         int workerCount = 4;
-        dispatcher = new ShardDispatcher(workerCount, 1000, nodes, RejectPolicy.DROP);
+        dispatcher = new ShardDispatcher(workerCount, 1000, nodes, RejectPolicy.DROP, metrics);
 
         // 当
         dispatcher.start();

@@ -3,6 +3,7 @@ package com.aypak.taskengine.alarm.dispatcher;
 import com.aypak.taskengine.alarm.core.AlarmEvent;
 import com.aypak.taskengine.alarm.core.PipelineContext;
 import com.aypak.taskengine.alarm.core.PipelineNode;
+import com.aypak.taskengine.alarm.monitor.AlarmMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +48,9 @@ public class Worker implements Runnable {
     /** 队列深度计数器 */
     private final AtomicInteger queueDepth;
 
+    /** 告警指标 */
+    private final AlarmMetrics metrics;
+
     /** Worker 状态 */
     private volatile WorkerState state = WorkerState.IDLE;
 
@@ -58,13 +62,14 @@ public class Worker implements Runnable {
 
     public Worker(int workerId, int queueCapacity, List<PipelineNode> nodes,
                   CountDownLatch shutdownLatch, AtomicInteger activeCount,
-                  AtomicInteger queueDepth) {
+                  AtomicInteger queueDepth, AlarmMetrics metrics) {
         this.workerId = workerId;
         this.queue = new ArrayBlockingQueue<>(queueCapacity);
         this.nodes = new ArrayList<>(nodes);
         this.shutdownLatch = shutdownLatch;
         this.activeCount = activeCount;
         this.queueDepth = queueDepth;
+        this.metrics = metrics;
     }
 
     @Override
@@ -176,6 +181,10 @@ public class Worker implements Runnable {
                 } else {
                     event.setStatus(AlarmEvent.ProcessingStatus.COMPLETED);
                 }
+                // 记录成功处理
+                if (metrics != null) {
+                    metrics.recordSuccess();
+                }
             }
 
         } catch (Exception e) {
@@ -183,6 +192,10 @@ public class Worker implements Runnable {
             event.setStatus(AlarmEvent.ProcessingStatus.FAILED);
             event.setErrorMessage(e.getMessage());
             failureCount.incrementAndGet();
+            // 记录失败到指标
+            if (metrics != null) {
+                metrics.recordFailure();
+            }
         }
     }
 

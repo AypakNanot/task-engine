@@ -3,6 +3,7 @@ package com.aypak.taskengine.alarm.dispatcher;
 import com.aypak.taskengine.alarm.core.AlarmEvent;
 import com.aypak.taskengine.alarm.core.PipelineNode;
 import com.aypak.taskengine.alarm.core.RejectPolicy;
+import com.aypak.taskengine.alarm.monitor.AlarmMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,21 +58,27 @@ public class ShardDispatcher {
     /** 提交计数 */
     private final AtomicInteger submitCount = new AtomicInteger(0);
 
+    /** 告警指标 */
+    private final AlarmMetrics metrics;
+
     /**
      * 创建分片调度器
      * @param workerCount Worker 数量
      * @param queueCapacity 每个 Worker 的队列容量
      * @param nodes 流水线节点列表
      * @param rejectPolicy 拒绝策略
+     * @param metrics 告警指标
      */
     public ShardDispatcher(int workerCount, int queueCapacity,
-                           List<PipelineNode> nodes, RejectPolicy rejectPolicy) {
+                           List<PipelineNode> nodes, RejectPolicy rejectPolicy,
+                           AlarmMetrics metrics) {
         this.workerCount = workerCount;
         this.queueCapacity = queueCapacity;
         this.nodes = nodes;
         this.rejectPolicy = rejectPolicy;
         this.workers = new Worker[workerCount];
         this.workerQueueDepths = new AtomicInteger[workerCount];
+        this.metrics = metrics;
 
         // 初始化 Worker
         for (int i = 0; i < workerCount; i++) {
@@ -92,7 +99,7 @@ public class ShardDispatcher {
         // 创建并启动 Worker 线程
         for (int i = 0; i < workerCount; i++) {
             workers[i] = new Worker(i, queueCapacity, nodes, shutdownLatch,
-                    activeCount, workerQueueDepths[i]);
+                    activeCount, workerQueueDepths[i], metrics);
             Thread workerThread = new Thread(workers[i], "AlarmWorker-" + i);
             workerThread.setDaemon(false);
             workerThread.start();

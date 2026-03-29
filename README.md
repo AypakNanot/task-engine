@@ -17,6 +17,7 @@ A high-performance unified task processing center for Spring Boot applications, 
 - [REST API](#rest-api)
 - [Architecture](#architecture)
 - [Best Practices](#best-practices)
+- [Documentation](#documentation)
 
 ## Background
 
@@ -431,6 +432,13 @@ mvn test -Dtest=TaskEngineLongStressTest
 # Run multi-task parallel test
 mvn test -Dtest=TaskEngineMultiTaskParallelTest
 ```
+
+## Documentation
+
+For more detailed information, see the full documentation:
+
+- **[TaskEngine Documentation](docs/TASKENGINE.md)** - Complete guide for TaskEngine including architecture, configuration, monitoring, and best practices
+- **[AlarmEngine Documentation](docs/ALARMENGINE.md)** - Complete guide for AlarmEngine including 9-node pipeline, sharding strategy, batch persistence, and performance optimization
 
 ## Requirements
 

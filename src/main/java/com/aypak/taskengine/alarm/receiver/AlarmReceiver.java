@@ -1,0 +1,223 @@
+package com.aypak.taskengine.alarm.receiver;
+
+import com.aypak.taskengine.alarm.core.AlarmEvent;
+import com.aypak.taskengine.alarm.core.RejectPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * 告警接收器
+ * 负责接收外部告警并提供背压保护
+ */
+public class AlarmReceiver {
+
+    private static final Logger log = LoggerFactory.getLogger(AlarmReceiver.class);
+
+    /** 默认队列容量 */
+    private static final int DEFAULT_CAPACITY = 50000;
+
+    /** 告警队列 */
+    private final BlockingQueue<AlarmEvent> queue;
+
+    /** 队列容量 */
+    private final int capacity;
+
+    /** 拒绝策略 */
+    private final RejectPolicy rejectPolicy;
+
+    /** 运行标志 */
+    private volatile boolean running = true;
+
+    /** 接收计数 */
+    private final AtomicLong receiveCount = new AtomicLong(0);
+
+    /** 丢弃计数 */
+    private final AtomicLong dropCount = new AtomicLong(0);
+
+    /** 丢弃日志 */
+    private final DropLogger dropLogger = new DropLogger();
+
+    /** 最后接收时间 */
+    private volatile long lastReceiveTime = System.currentTimeMillis();
+
+    /**
+     * 创建告警接收器
+     */
+    public AlarmReceiver() {
+        this(DEFAULT_CAPACITY, RejectPolicy.DROP);
+    }
+
+    /**
+     * 创建告警接收器
+     * @param capacity 队列容量
+     * @param rejectPolicy 拒绝策略
+     */
+    public AlarmReceiver(int capacity, RejectPolicy rejectPolicy) {
+        this.capacity = capacity;
+        this.rejectPolicy = rejectPolicy;
+        this.queue = new ArrayBlockingQueue<>(capacity);
+    }
+
+    /**
+     * 接收告警
+     * @param event 告警事件
+     * @return true 表示成功接收，false 表示被拒绝
+     */
+    public boolean receive(AlarmEvent event) {
+        if (!running) {
+            log.warn("Receiver is not running, rejecting event: {}", event.getId());
+            return false;
+        }
+
+        lastReceiveTime = System.currentTimeMillis();
+
+        switch (rejectPolicy) {
+            case DROP:
+                return handleDrop(event);
+            case DROP_OLDEST:
+                return handleDropOldest(event);
+            case BLOCK:
+                return handleBlock(event);
+            case CALLER_RUNS:
+                return handleCallerRuns(event);
+            default:
+                return handleDrop(event);
+        }
+    }
+
+    /**
+     * DROP 策略
+     */
+    private boolean handleDrop(AlarmEvent event) {
+        if (queue.offer(event)) {
+            receiveCount.incrementAndGet();
+            return true;
+        }
+        dropCount.incrementAndGet();
+        dropLogger.recordDrop(event);
+        return false;
+    }
+
+    /**
+     * DROP_OLDEST 策略
+     */
+    private boolean handleDropOldest(AlarmEvent event) {
+        // 尝试移除最旧元素
+        AlarmEvent oldest = queue.poll();
+        if (oldest != null) {
+            dropCount.incrementAndGet();
+            dropLogger.recordDrop(oldest);
+        }
+        if (queue.offer(event)) {
+            receiveCount.incrementAndGet();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * BLOCK 策略
+     */
+    private boolean handleBlock(AlarmEvent event) {
+        try {
+            if (queue.offer(event, 5, TimeUnit.SECONDS)) {
+                receiveCount.incrementAndGet();
+                return true;
+            }
+            dropCount.incrementAndGet();
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    /**
+     * CALLER_RUNS 策略
+     */
+    private boolean handleCallerRuns(AlarmEvent event) {
+        if (queue.offer(event)) {
+            receiveCount.incrementAndGet();
+            return true;
+        }
+        // 队列满时返回 false，调用者需自行处理
+        dropCount.incrementAndGet();
+        return false;
+    }
+
+    /**
+     * 获取告警（消费者使用）
+     */
+    public AlarmEvent poll(long timeout, TimeUnit unit) throws InterruptedException {
+        return queue.poll(timeout, unit);
+    }
+
+    /**
+     * 获取队列大小
+     */
+    public int getQueueSize() {
+        return queue.size();
+    }
+
+    /**
+     * 获取队列剩余容量
+     */
+    public int getRemainingCapacity() {
+        return queue.remainingCapacity();
+    }
+
+    /**
+     * 停止接收
+     */
+    public void stop() {
+        log.info("AlarmReceiver stopping...");
+        this.running = false;
+    }
+
+    /**
+     * 是否正在运行
+     */
+    public boolean isRunning() {
+        return running;
+    }
+
+    /**
+     * 获取接收计数
+     */
+    public long getReceiveCount() {
+        return receiveCount.get();
+    }
+
+    /**
+     * 获取丢弃计数
+     */
+    public long getDropCount() {
+        return dropCount.get();
+    }
+
+    /**
+     * 获取队列利用率（百分比）
+     */
+    public double getQueueUtilization() {
+        return (double) queue.size() / capacity * 100;
+    }
+
+    /**
+     * 获取最后接收时间
+     */
+    public long getLastReceiveTime() {
+        return lastReceiveTime;
+    }
+
+    /**
+     * 丢弃日志器
+     */
+    public DropLogger getDropLogger() {
+        return dropLogger;
+    }
+}

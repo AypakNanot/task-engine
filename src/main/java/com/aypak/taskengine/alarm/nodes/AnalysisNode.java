@@ -1,0 +1,128 @@
+package com.aypak.taskengine.alarm.nodes;
+
+import com.aypak.taskengine.alarm.core.AlarmEvent;
+import com.aypak.taskengine.alarm.core.PipelineContext;
+import com.aypak.taskengine.alarm.core.PipelineNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * 分析节点 - 业务逻辑分析
+ * 计算告警严重度、进行关联分析等
+ */
+public class AnalysisNode implements PipelineNode {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalysisNode.class);
+
+    /** 是否启用严重度提升规则 */
+    private volatile boolean enableSeverityBoost = true;
+
+    @Override
+    public String getNodeName() {
+        return "Analysis";
+    }
+
+    @Override
+    public boolean process(AlarmEvent event, PipelineContext context) {
+        long startTime = System.currentTimeMillis();
+
+        try {
+            // 1. 计算告警严重度
+            calculateSeverity(event, context);
+
+            // 2. 关联分析（可扩展）
+            correlateAlarm(event, context);
+
+            // 3. 丰富告警数据
+            enrichAlarm(event, context);
+
+            long latency = System.currentTimeMillis() - startTime;
+            context.recordNodeLatency(getNodeName(), latency);
+
+            log.debug("Analysis node processed alarm {} in {}ms, severity: {}",
+                    event.getId(), latency, event.getSeverity());
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("Analysis failed for alarm {}", event.getId(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * 计算告警严重度
+     * 可根据业务规则调整严重度级别
+     */
+    private void calculateSeverity(AlarmEvent event, PipelineContext context) {
+        if (!enableSeverityBoost) {
+            return;
+        }
+
+        // 示例：根据 payload 中的指标提升严重度
+        String criticality = event.getPayload("criticality");
+        if ("critical".equalsIgnoreCase(criticality)) {
+            event.setSeverity(AlarmEvent.Severity.CRITICAL);
+            log.debug("Boosted alarm {} to CRITICAL severity", event.getId());
+        }
+
+        // 示例：根据告警类型设置默认严重度
+        if (event.getSeverity() == null) {
+            String alarmType = event.getAlarmType();
+            if (alarmType != null) {
+                if (alarmType.contains("CRITICAL") || alarmType.contains("FATAL")) {
+                    event.setSeverity(AlarmEvent.Severity.CRITICAL);
+                } else if (alarmType.contains("MAJOR") || alarmType.contains("HIGH")) {
+                    event.setSeverity(AlarmEvent.Severity.MAJOR);
+                } else if (alarmType.contains("MINOR") || alarmType.contains("MEDIUM")) {
+                    event.setSeverity(AlarmEvent.Severity.MINOR);
+                } else if (alarmType.contains("WARNING") || alarmType.contains("WARN")) {
+                    event.setSeverity(AlarmEvent.Severity.WARNING);
+                } else {
+                    event.setSeverity(AlarmEvent.Severity.INFO);
+                }
+            }
+        }
+    }
+
+    /**
+     * 关联分析
+     * 可扩展实现告警关联、根因分析等
+     */
+    private void correlateAlarm(AlarmEvent event, PipelineContext context) {
+        // 预留扩展点
+        // 可以实现：
+        // - 相同时段同一设备的告警关联
+        // - 告警风暴检测
+        // - 根因分析
+    }
+
+    /**
+     * 丰富告警数据
+     * 添加额外的上下文信息
+     */
+    private void enrichAlarm(AlarmEvent event, PipelineContext context) {
+        // 预留扩展点
+        // 可以实现：
+        // - 添加设备信息
+        // - 添加地理位置
+        // - 添加业务影响分析
+    }
+
+    /**
+     * 设置是否启用严重度提升
+     */
+    public void setEnableSeverityBoost(boolean enableSeverityBoost) {
+        this.enableSeverityBoost = enableSeverityBoost;
+    }
+
+    @Override
+    public void onFailure(AlarmEvent event, Throwable error) {
+        log.error("AnalysisNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    }
+
+    @Override
+    public boolean isCritical() {
+        return true;
+    }
+}

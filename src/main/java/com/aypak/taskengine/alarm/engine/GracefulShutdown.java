@@ -12,31 +12,34 @@ import java.util.concurrent.TimeUnit;
 /**
  * 优雅停机处理器
  * 确保停机时不丢失数据
+ * Graceful shutdown handler.
+ * Ensures no data loss during shutdown.
  */
 public class GracefulShutdown {
 
     private static final Logger log = LoggerFactory.getLogger(GracefulShutdown.class);
 
-    /** 停机超时时间（秒）*/
+    /** 停机超时时间（秒）/ Shutdown timeout in seconds */
     private final long shutdownTimeoutSec;
 
-    /** 告警接收器 */
+    /** 告警接收器 / Alarm receiver */
     private final AlarmReceiver receiver;
 
-    /** 分片调度器 */
+    /** 分片调度器 / Shard dispatcher */
     private final ShardDispatcher dispatcher;
 
-    /** 批量数据库执行器 */
+    /** 批量数据库执行器 / Batch database executor */
     private final BatchDBExecutor dbExecutor;
 
-    /** 停机锁存器 */
+    /** 停机锁存器 / Shutdown latch */
     private CountDownLatch shutdownLatch;
 
-    /** 运行标志 */
+    /** 运行标志 / Running flag */
     private volatile boolean shuttingDown = false;
 
     /**
      * 创建优雅停机处理器
+     * Create graceful shutdown handler.
      */
     public GracefulShutdown(AlarmReceiver receiver, ShardDispatcher dispatcher,
                            BatchDBExecutor dbExecutor, long shutdownTimeoutSec) {
@@ -48,6 +51,7 @@ public class GracefulShutdown {
 
     /**
      * 注册 JVM 停机钩子
+     * Register JVM shutdown hook.
      */
     public void registerShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(this::shutdown, "AlarmEngine-ShutdownHook"));
@@ -56,6 +60,7 @@ public class GracefulShutdown {
 
     /**
      * 执行优雅停机
+     * Execute graceful shutdown.
      */
     public void shutdown() {
         if (shuttingDown) {
@@ -117,10 +122,11 @@ public class GracefulShutdown {
 
     /**
      * 等待 Worker 队列清空
+     * Wait for Worker queues to drain.
      */
     private void waitForDrain() {
         try {
-            // 检查 Receiver 队列和所有 Worker 队列
+            // 检查 Receiver 队列和所有 Worker 队列 / Check Receiver and all Worker queues
             while (!Thread.currentThread().isInterrupted()) {
                 int receiverSize = receiver.getQueueSize();
                 int[] workerDepths = dispatcher.getWorkerQueueDepths();
@@ -141,7 +147,7 @@ public class GracefulShutdown {
                 log.debug("Waiting for queues to drain: Receiver[{}] Workers[{}] Total[{}]",
                         receiverSize, totalWorkerDepth, totalDepth);
 
-                // 等待 100ms 后重试
+                // 等待 100ms 后重试 / Wait 100ms before retry
                 Thread.sleep(100);
             }
         } catch (InterruptedException e) {
@@ -155,6 +161,7 @@ public class GracefulShutdown {
 
     /**
      * 是否正在停机
+     * Whether shutting down.
      */
     public boolean isShuttingDown() {
         return shuttingDown;

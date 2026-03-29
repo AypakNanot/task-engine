@@ -10,17 +10,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 北向过滤节点
- * 根据客户订阅规则过滤告警
+ * 北向过滤节点。
+ * 根据客户订阅规则过滤告警。
+ * Northbound filter node.
+ * Filters alarms based on customer subscription rules.
  */
 public class NbFilterNode implements PipelineNode {
 
     private static final Logger log = LoggerFactory.getLogger(NbFilterNode.class);
 
-    /** 订阅的告警类型集合：customerId -> alarmTypes */
+    /** 订阅的告警类型集合：customerId -> alarmTypes / Subscription alarm types: customerId -> alarmTypes */
     private final ConcurrentHashMap<String, Set<String>> customerSubscriptions = new ConcurrentHashMap<>();
 
-    /** 是否启用过滤 */
+    /** 是否启用过滤 / Whether filtering is enabled */
     private volatile boolean enabled = true;
 
     @Override
@@ -36,24 +38,24 @@ public class NbFilterNode implements PipelineNode {
 
         long startTime = System.currentTimeMillis();
 
-        // 获取客户 ID（从 payload 或 context）
+        // 获取客户 ID（从 payload 或 context）/ Get customer ID (from payload or context)
         String customerId = event.getPayload("customerId");
         if (customerId == null) {
-            // 没有指定客户，默认通过
+            // 没有指定客户，默认通过 / No customer specified, allow by default
             return true;
         }
 
-        // 检查客户订阅
+        // 检查客户订阅 / Check customer subscription
         Set<String> subscriptions = customerSubscriptions.get(customerId);
         if (subscriptions == null || subscriptions.isEmpty()) {
-            // 客户没有订阅任何告警类型
+            // 客户没有订阅任何告警类型 / Customer has no subscriptions
             log.debug("Alarm {} filtered: customer {} has no subscriptions",
                     event.getId(), customerId);
             context.setDropReason("No subscription for customer " + customerId);
             return false;
         }
 
-        // 检查告警类型是否在订阅中
+        // 检查告警类型是否在订阅中 / Check if alarm type is in subscription
         if (!subscriptions.contains(event.getAlarmType()) &&
             !subscriptions.contains("*")) {
             log.debug("Alarm {} filtered: customer {} not subscribed to type {}",
@@ -69,7 +71,8 @@ public class NbFilterNode implements PipelineNode {
     }
 
     /**
-     * 添加客户订阅
+     * 添加客户订阅。
+     * Add customer subscription.
      */
     public void addSubscription(String customerId, String alarmType) {
         customerSubscriptions
@@ -79,7 +82,8 @@ public class NbFilterNode implements PipelineNode {
     }
 
     /**
-     * 移除客户订阅
+     * 移除客户订阅。
+     * Remove customer subscription.
      */
     public void removeSubscription(String customerId, String alarmType) {
         Set<String> subscriptions = customerSubscriptions.get(customerId);
@@ -90,7 +94,8 @@ public class NbFilterNode implements PipelineNode {
     }
 
     /**
-     * 设置是否启用过滤
+     * 设置是否启用过滤。
+     * Set whether filtering is enabled.
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;

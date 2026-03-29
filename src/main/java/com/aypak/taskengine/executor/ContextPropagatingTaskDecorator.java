@@ -7,6 +7,8 @@ import org.slf4j.MDC;
 import java.util.Map;
 
 /**
+ * 用于异步边界上下文传播的任务装饰器。
+ * 将 MDC 上下文从提交线程传播到执行线程。
  * Task decorator for context propagation across async boundaries.
  * Propagates MDC context from submission thread to execution thread.
  */
@@ -24,14 +26,14 @@ public class ContextPropagatingTaskDecorator implements java.util.concurrent.Thr
     @Override
     public Thread newThread(Runnable r) {
         Runnable wrappedRunnable = () -> {
-            // Propagate context before execution
+            // 执行前传播上下文 / Propagate context before execution
             try {
                 if (context != null) {
                     context.propagate();
                 }
                 r.run();
             } finally {
-                // Clear context after execution to prevent leakage
+                // 执行后清除上下文，防止泄露 / Clear context after execution to prevent leakage
                 if (context != null) {
                     context.clear();
                 }
@@ -41,11 +43,12 @@ public class ContextPropagatingTaskDecorator implements java.util.concurrent.Thr
     }
 
     /**
+     * 使用上下文传播包装 Runnable。
      * Wrap a runnable with context propagation.
      *
-     * @param runnable original runnable
-     * @param context  task context
-     * @return wrapped runnable with MDC propagation
+     * @param runnable 原始 Runnable / original runnable
+     * @param context  任务上下文 / task context
+     * @return 带有 MDC 传播的包装 Runnable / wrapped runnable with MDC propagation
      */
     public static Runnable wrap(Runnable runnable, TaskContext context) {
         return () -> {
@@ -63,9 +66,10 @@ public class ContextPropagatingTaskDecorator implements java.util.concurrent.Thr
     }
 
     /**
+     * 捕获当前 MDC 上下文用于传播。
      * Capture current MDC context for propagation.
      *
-     * @return new TaskContext with current MDC state
+     * @return 带有当前 MDC 状态的新 TaskContext / new TaskContext with current MDC state
      */
     public static TaskContext captureContext() {
         String traceId = MDC.get("traceId");

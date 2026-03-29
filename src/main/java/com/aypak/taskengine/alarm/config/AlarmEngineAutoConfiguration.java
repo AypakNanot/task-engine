@@ -15,6 +15,8 @@ import javax.sql.DataSource;
 /**
  * 告警引擎自动配置
  * 只有在存在 DataSource Bean 且启用时才生效
+ * Alarm engine auto configuration.
+ * Only生效 when DataSource Bean exists and is enabled.
  */
 @Configuration
 @EnableConfigurationProperties(AlarmEngineProperties.class)
@@ -26,6 +28,7 @@ public class AlarmEngineAutoConfiguration {
 
     /**
      * 创建告警引擎 Bean
+     * Create alarm engine Bean.
      */
     @Bean
     public AlarmEngine alarmEngine(DataSource dataSource, AlarmEngineProperties properties) {
@@ -39,6 +42,7 @@ public class AlarmEngineAutoConfiguration {
                 properties.getBatchTimeoutMs());
 
         // 创建告警引擎
+        // Create alarm engine
         AlarmEngineImpl engine = new AlarmEngineImpl(
                 dataSource,
                 getInsertSql(),
@@ -49,6 +53,7 @@ public class AlarmEngineAutoConfiguration {
         );
 
         // 启动引擎
+        // Start engine
         engine.start();
 
         log.info("AlarmEngine initialized and started");
@@ -59,9 +64,12 @@ public class AlarmEngineAutoConfiguration {
     /**
      * 获取默认插入 SQL
      * 可通过配置覆盖
+     * Get default insert SQL.
+     * Can be overridden by configuration.
      */
     private String getInsertSql() {
         // 默认 SQL，可根据实际表结构修改
+        // Default SQL, can be modified according to actual table structure
         return "INSERT INTO alarm_event " +
                 "(device_id, alarm_type, occur_time, severity, source_system, location, description, submit_time) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -69,6 +77,7 @@ public class AlarmEngineAutoConfiguration {
 
     /**
      * 解析拒绝策略
+     * Parse rejection policy.
      */
     private com.aypak.taskengine.alarm.core.RejectPolicy parseRejectPolicy(String policyStr) {
         try {

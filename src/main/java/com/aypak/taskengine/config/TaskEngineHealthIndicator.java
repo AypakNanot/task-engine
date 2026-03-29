@@ -9,6 +9,7 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import java.util.Map;
 
 /**
+ * 任务引擎的 Spring Boot Actuator 健康指示器。
  * Spring Boot Actuator health indicator for Task Engine.
  */
 @RequiredArgsConstructor
@@ -57,7 +58,7 @@ public class TaskEngineHealthIndicator implements HealthIndicator {
         builder.withDetail("warningTasks", warningTasks);
         builder.withDetail("failedTasks", failedTasks);
 
-        // Overall status
+        // 整体状态 / Overall status
         if (failedTasks > 0) {
             builder = Health.down().withDetail("reason", "Some pools are terminated");
         } else if (warningTasks > 0) {

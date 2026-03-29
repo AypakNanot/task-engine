@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 任务处理器的线程安全注册表。
+ * 使用 ConcurrentHashMap 实现并发注册和查找。
  * Thread-safe registry for task processors.
  * Uses ConcurrentHashMap for concurrent registration and lookup.
  */
@@ -21,12 +23,13 @@ public class TaskRegistry {
     private final Map<String, TaskMetrics> metrics = new ConcurrentHashMap<>();
 
     /**
+     * 使用指标注册任务处理器及其配置。
      * Register a task processor with its configuration and pre-created metrics.
      *
-     * @param config    task configuration
-     * @param processor task processor implementation
-     * @param metrics   pre-created metrics (if null, new metrics will be created)
-     * @throws IllegalArgumentException if registration already exists
+     * @param config    任务配置 / task configuration
+     * @param processor 任务处理器实现 / task processor implementation
+     * @param metrics   预先创建的指标（如果为 null 则创建新指标）/ pre-created metrics (if null, new metrics will be created)
+     * @throws IllegalArgumentException 如果已存在注册 / if registration already exists
      */
     public <T> void registerWithMetrics(TaskConfig config, ITaskProcessor<T> processor, TaskMetrics metrics) {
         String taskName = config.getTaskName();
@@ -48,20 +51,25 @@ public class TaskRegistry {
     }
 
     /**
+     * 使用配置注册任务处理器。
+     * 内部调用 registerWithMetrics，不传入指标（将创建新指标）。
      * Register a task processor with its configuration.
+     * Internally calls registerWithMetrics without metrics (will create new metrics).
      *
-     * @param config    task configuration
-     * @param processor task processor implementation
-     * @throws IllegalArgumentException if registration already exists
+     * @param config    任务配置 / task configuration
+     * @param processor 任务处理器实现 / task processor implementation
+     * @throws IllegalArgumentException 如果已存在注册 / if registration already exists
      */
     public <T> void register(TaskConfig config, ITaskProcessor<T> processor) {
         registerWithMetrics(config, processor, null);
     }
 
     /**
+     * 按名称获取任务注册信息。
+     * 返回：注册信息，如果未找到则返回 null。
      * Get task registration by name.
      *
-     * @param taskName task name
+     * @param taskName 任务名称 / task name
      * @return registration or null if not found
      */
     public TaskRegistration<?> getRegistration(String taskName) {
@@ -69,9 +77,11 @@ public class TaskRegistry {
     }
 
     /**
+     * 按名称获取任务指标。
+     * 返回：指标，如果未找到则返回 null。
      * Get task metrics by name.
      *
-     * @param taskName task name
+     * @param taskName 任务名称 / task name
      * @return metrics or null if not found
      */
     public TaskMetrics getMetrics(String taskName) {
@@ -79,6 +89,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 获取所有注册信息。
      * Get all registrations.
      */
     public Collection<TaskRegistration<?>> getAllRegistrations() {
@@ -86,6 +97,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 获取所有指标。
      * Get all metrics.
      */
     public Map<String, TaskMetrics> getAllMetrics() {
@@ -93,6 +105,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 检查任务是否已注册。
      * Check if task is registered.
      */
     public boolean isRegistered(String taskName) {
@@ -100,6 +113,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 注销任务（用于清理）。
      * Deregister a task (for cleanup).
      */
     public void deregister(String taskName) {
@@ -112,6 +126,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 获取已注册任务总数。
      * Get total registered task count.
      */
     public int getTaskCount() {
@@ -119,6 +134,7 @@ public class TaskRegistry {
     }
 
     /**
+     * 任务注册容器。
      * Task registration container.
      */
     @lombok.Getter

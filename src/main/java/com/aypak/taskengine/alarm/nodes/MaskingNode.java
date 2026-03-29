@@ -12,25 +12,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 屏蔽节点 - 本地屏蔽
- * 根据屏蔽规则过滤告警
+ * 屏蔽节点 - 本地屏蔽。
+ * 根据屏蔽规则过滤告警。
+ * Masking node - local masking.
+ * Filters alarms based on masking rules.
  */
 public class MaskingNode implements PipelineNode {
 
     private static final Logger log = LoggerFactory.getLogger(MaskingNode.class);
 
-    /** 全局屏蔽规则 */
+    /** 全局屏蔽规则 / Global masking rules */
     private final CopyOnWriteArrayList<MaskingRule> globalRules = new CopyOnWriteArrayList<>();
 
-    /** 设备级屏蔽规则：deviceId -> rules */
+    /** 设备级屏蔽规则：deviceId -> rules / Device-level masking rules: deviceId -> rules */
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<MaskingRule>> deviceRules =
             new ConcurrentHashMap<>();
 
-    /** 告警类型级屏蔽规则：alarmType -> rules */
+    /** 告警类型级屏蔽规则：alarmType -> rules / Alarm type-level masking rules: alarmType -> rules */
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<MaskingRule>> typeRules =
             new ConcurrentHashMap<>();
 
-    /** 是否启用屏蔽 */
+    /** 是否启用屏蔽 / Whether masking is enabled */
     private volatile boolean enabled = true;
 
     @Override

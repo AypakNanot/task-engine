@@ -10,6 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 队列深度监控器，带有告警触发功能。
  * Queue depth monitor with alert triggering.
  */
 @Slf4j
@@ -28,9 +29,10 @@ public class QueueMonitor {
     }
 
     /**
+     * 启动定期队列监控。
      * Start periodic queue monitoring.
      *
-     * @param intervalMs monitoring interval in milliseconds
+     * @param intervalMs 监控间隔（毫秒）/ monitoring interval in milliseconds
      */
     public void start(long intervalMs) {
         monitorExecutor.scheduleAtFixedRate(
@@ -43,6 +45,7 @@ public class QueueMonitor {
     }
 
     /**
+     * 检查所有队列并触发告警。
      * Check all queues and trigger alerts.
      */
     private void checkQueues() {
@@ -71,6 +74,7 @@ public class QueueMonitor {
     }
 
     /**
+     * 停止监控。
      * Stop monitoring.
      */
     public void stop() {

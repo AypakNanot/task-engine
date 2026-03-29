@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 指标收集器和聚合器。
  * Metrics collector and aggregator.
  */
 @Slf4j
@@ -22,6 +23,12 @@ public class MetricsCollector {
         this.properties = properties;
     }
 
+    /**
+     * 收集所有任务的统计快照。
+     * Collect statistics snapshot for all tasks.
+     *
+     * @return 任务名称到统计响应的映射 / map of task name to stats response
+     */
     public Map<String, TaskStatsResponse> collectSnapshot() {
         Map<String, TaskMetrics> metrics = taskEngine.getStats();
         Map<String, TaskExecutor> executors = taskEngine.getExecutors();
@@ -38,6 +45,13 @@ public class MetricsCollector {
         return snapshot;
     }
 
+    /**
+     * 收集单个任务的统计快照。
+     * Collect statistics snapshot for a single task.
+     *
+     * @param taskName 任务名称 / task name
+     * @return 任务统计响应，如果未找到则返回 null / task stats response, null if not found
+     */
     public TaskStatsResponse collectTaskSnapshot(String taskName) {
         TaskMetrics m = taskEngine.getStats(taskName);
         if (m == null) {
@@ -50,6 +64,14 @@ public class MetricsCollector {
         return buildResponse(m, queueCapacity);
     }
 
+    /**
+     * 构建统计响应对象。
+     * Build stats response object.
+     *
+     * @param m 任务指标 / task metrics
+     * @param queueCapacity 队列容量 / queue capacity
+     * @return 统计响应 / stats response
+     */
     private TaskStatsResponse buildResponse(TaskMetrics m, int queueCapacity) {
         TaskStatsResponse response = new TaskStatsResponse();
         response.setTaskName(m.getTaskName());

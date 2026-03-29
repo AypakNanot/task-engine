@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 任务引擎 - 任务管理的主要协调器。
+ * 针对高吞吐量优化，热路径开销最小化。
  * Task Engine - main orchestrator for task management.
  * Optimized for high-throughput with minimal overhead in hot path.
  */
@@ -39,6 +41,13 @@ public class TaskEngineImpl implements TaskEngine {
         this.scaler = scaler;
     }
 
+    /**
+     * 注册任务处理器。
+     * Register a task processor.
+     *
+     * @param config    任务配置 / task configuration
+     * @param processor 任务处理器实现 / task processor implementation
+     */
     @Override
     public <T> void register(TaskConfig config, ITaskProcessor<T> processor) {
         config.validate();
@@ -63,6 +72,13 @@ public class TaskEngineImpl implements TaskEngine {
                 taskName, config.getTaskType(), config.getPriority());
     }
 
+    /**
+     * 获取任务类型的默认最大线程数。
+     * Get default max thread count for task type.
+     *
+     * @param type 任务类型 / task type
+     * @return 默认最大线程数 / default max thread count
+     */
     private int getDefaultMaxSize(TaskType type) {
         int cpuCount = Runtime.getRuntime().availableProcessors();
         return switch (type) {
@@ -73,6 +89,14 @@ public class TaskEngineImpl implements TaskEngine {
         };
     }
 
+    /**
+     * 创建任务执行器。
+     * Create task executor.
+     *
+     * @param config  任务配置 / task configuration
+     * @param metrics 任务指标 / task metrics
+     * @return 任务执行器 / task executor
+     */
     private TaskExecutor createExecutor(TaskConfig config, TaskMetrics metrics) {
         if (config.getTaskType() == TaskType.CRON) {
             ThreadPoolTaskScheduler scheduler = poolFactory.createScheduler(config);
@@ -84,6 +108,8 @@ public class TaskEngineImpl implements TaskEngine {
     }
 
     /**
+     * 执行任务 - 针对高吞吐量优化。
+     * 热路径开销最小化：无日志记录，无不必要的计算。
      * Execute task - optimized for high throughput.
      * Minimal overhead in hot path: no logging, no unnecessary calculations.
      */
@@ -107,26 +133,26 @@ public class TaskEngineImpl implements TaskEngine {
         @SuppressWarnings("unchecked")
         ITaskProcessor<T> processor = (ITaskProcessor<T>) registration.getProcessor();
 
-        // Capture context once
+        // 捕获上下文一次 / Capture context once
         String traceId = MDC.get("traceId");
         Map<String, String> mdcContext = MDC.getCopyOfContextMap();
         TaskContext context = new TaskContext(traceId, mdcContext, System.currentTimeMillis());
 
         executor.execute(() -> {
             try {
-                // Propagate MDC context
+                // 传播 MDC 上下文 / Propagate MDC context
                 if (mdcContext != null && !mdcContext.isEmpty()) {
                     MDC.setContextMap(mdcContext);
                 }
 
-                // Execute task
+                // 执行任务 / Execute task
                 processor.process(payload);
 
-                // Success callback (only if overridden)
+                // 成功回调（仅当重写时）/ Success callback (only if overridden)
                 processor.onSuccess(payload);
             } catch (Throwable e) {
                 metrics.recordFailure();
-                // Only log at debug level to reduce overhead
+                // 仅在 debug 级别记录日志以减少开销 / Only log at debug level to reduce overhead
                 if (log.isDebugEnabled()) {
                     log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), e.getMessage());
                 }
@@ -168,6 +194,13 @@ public class TaskEngineImpl implements TaskEngine {
         return metrics;
     }
 
+    /**
+     * 更新任务配置。
+     * Update task configuration.
+     *
+     * @param taskName 任务名称 / task name
+     * @param config   动态配置 / dynamic configuration
+     */
     @Override
     public void updateConfig(String taskName, DynamicConfig config) {
         config.validate();
@@ -191,6 +224,12 @@ public class TaskEngineImpl implements TaskEngine {
         }
     }
 
+    /**
+     * 重置指定任务的指标。
+     * Reset metrics for a specific task.
+     *
+     * @param taskName 任务名称 / task name
+     */
     @Override
     public void resetMetrics(String taskName) {
         TaskMetrics metrics = registry.getMetrics(taskName);
@@ -200,6 +239,10 @@ public class TaskEngineImpl implements TaskEngine {
         }
     }
 
+    /**
+     * 重置所有任务指标。
+     * Reset all task metrics.
+     */
     @Override
     public void resetAllMetrics() {
         registry.getAllMetrics().values().forEach(TaskMetrics::reset);
@@ -211,6 +254,10 @@ public class TaskEngineImpl implements TaskEngine {
         return registry.getAllRegistrations();
     }
 
+    /**
+     * 优雅关闭任务引擎。
+     * Graceful shutdown of task engine.
+     */
     @PreDestroy
     public void shutdown() {
         log.info("Task Engine shutting down gracefully...");

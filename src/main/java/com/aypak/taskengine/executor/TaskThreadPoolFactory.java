@@ -10,6 +10,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
+ * 用于为每个任务类型创建隔离线程池的工厂。
  * Factory for creating isolated thread pools per task type.
  */
 public class TaskThreadPoolFactory {
@@ -17,7 +18,11 @@ public class TaskThreadPoolFactory {
     private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
 
     /**
+     * 为给定任务配置创建 ThreadPoolTaskExecutor。
      * Create ThreadPoolTaskExecutor for given task config.
+     *
+     * @param config 任务配置 / task configuration
+     * @return 线程池执行器 / thread pool executor
      */
     public ThreadPoolTaskExecutor createExecutor(TaskConfig config) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -53,7 +58,11 @@ public class TaskThreadPoolFactory {
     }
 
     /**
+     * 为 CRON 类型任务创建 ThreadPoolTaskScheduler。
      * Create ThreadPoolTaskScheduler for CRON type tasks.
+     *
+     * @param config 任务配置 / task configuration
+     * @return 线程池调度器 / thread pool scheduler
      */
     public ThreadPoolTaskScheduler createScheduler(TaskConfig config) {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
@@ -77,6 +86,14 @@ public class TaskThreadPoolFactory {
         return scheduler;
     }
 
+    /**
+     * 创建拒绝执行处理器。
+     * Create rejected execution handler.
+     *
+     * @param policy  拒绝策略 / rejection policy
+     * @param taskName 任务名称 / task name
+     * @return 拒绝执行处理器 / rejected execution handler
+     */
     private RejectedExecutionHandler createRejectionHandler(RejectionPolicy policy, String taskName) {
         if (policy == null) {
             return new ThreadPoolExecutor.AbortPolicy();
@@ -95,6 +112,10 @@ public class TaskThreadPoolFactory {
         }
     }
 
+    /**
+     * 获取任务类型的默认核心线程数。
+     * Get default core thread count for task type.
+     */
     private int getDefaultCoreSize(TaskType type) {
         return switch (type) {
             case INIT -> 1;
@@ -104,6 +125,10 @@ public class TaskThreadPoolFactory {
         };
     }
 
+    /**
+     * 获取任务类型的默认最大线程数。
+     * Get default max thread count for task type.
+     */
     private int getDefaultMaxSize(TaskType type) {
         return switch (type) {
             case INIT -> CPU_COUNT;
@@ -113,6 +138,10 @@ public class TaskThreadPoolFactory {
         };
     }
 
+    /**
+     * 获取任务类型的默认队列容量。
+     * Get default queue capacity for task type.
+     */
     private int getDefaultQueueCapacity(TaskType type) {
         return switch (type) {
             case INIT -> 0;
@@ -123,6 +152,7 @@ public class TaskThreadPoolFactory {
     }
 
     /**
+     * 自定义拒绝策略，阻塞直到有空闲位置。
      * Custom rejection policy that blocks until space available.
      */
     private static class BlockWaitPolicy implements RejectedExecutionHandler {

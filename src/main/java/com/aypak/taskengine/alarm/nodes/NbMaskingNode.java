@@ -11,18 +11,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 北向屏蔽节点
- * 根据客户屏蔽规则过滤告警
+ * 北向屏蔽节点。
+ * 根据客户屏蔽规则过滤告警。
+ * Northbound masking node.
+ * Filters alarms based on customer masking rules.
  */
 public class NbMaskingNode implements PipelineNode {
 
     private static final Logger log = LoggerFactory.getLogger(NbMaskingNode.class);
 
-    /** 客户级屏蔽规则：customerId -> rules */
+    /** 客户级屏蔽规则：customerId -> rules / Customer-level masking rules: customerId -> rules */
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<MaskingRule>> customerRules =
             new ConcurrentHashMap<>();
 
-    /** 是否启用屏蔽 */
+    /** 是否启用屏蔽 / Whether masking is enabled */
     private volatile boolean enabled = true;
 
     @Override

@@ -8,6 +8,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * 命名线程工厂，用于标准化线程命名。
+ * 格式：{TaskType}-{TaskName}-{ThreadId}
  * Named thread factory for standardized thread naming.
  * Format: {TaskType}-{TaskName}-{ThreadId}
  */

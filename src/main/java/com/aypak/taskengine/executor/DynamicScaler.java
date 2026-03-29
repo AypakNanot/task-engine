@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ * 根据队列压力动态扩展线程池。
  * Dynamic scaler for thread pools based on queue pressure.
  */
 @Slf4j
@@ -30,9 +31,10 @@ public class DynamicScaler {
     }
 
     /**
+     * 启动定期扩展评估。
      * Start periodic scaling evaluation.
      *
-     * @param intervalMs evaluation interval in milliseconds
+     * @param intervalMs 评估间隔（毫秒）/ evaluation interval in milliseconds
      */
     public void start(long intervalMs) {
         scalerExecutor.scheduleAtFixedRate(
@@ -45,6 +47,7 @@ public class DynamicScaler {
     }
 
     /**
+     * 评估所有执行器的扩展需求。
      * Evaluate scaling needs for all executors.
      */
     private void evaluateScaling() {
@@ -62,9 +65,11 @@ public class DynamicScaler {
             int activeThreads = executor.getActiveThreads();
             int currentMax = executor.getMaxPoolSize();
 
+            // 计算总线程数以检查全局限制
             // Calculate total threads for global limit check
             int currentTotal = totalThreads.get();
 
+            // 检查是否需要扩展
             // Scale-up check
             if (shouldScaleUp(queueDepth, queueCapacity, activeThreads, currentMax)) {
                 if (currentTotal < properties.getGlobalMaxThreads()) {
@@ -83,6 +88,7 @@ public class DynamicScaler {
                 }
             }
 
+            // 检查是否需要缩小（简化 - 基于低利用率）
             // Scale-down check (simplified - based on low utilization)
             if (shouldScaleDown(queueDepth, queueCapacity, activeThreads, currentMax, metrics)) {
                 int originalMax = metrics.getOriginalMaxPoolSize().get();
@@ -98,6 +104,7 @@ public class DynamicScaler {
     }
 
     /**
+     * 检查是否需要扩展。
      * Check if scale-up is needed.
      */
     private boolean shouldScaleUp(int queueDepth, int queueCapacity, int activeThreads, int currentMax) {
@@ -109,6 +116,7 @@ public class DynamicScaler {
     }
 
     /**
+     * 检查是否需要缩小。
      * Check if scale-down is needed.
      */
     private boolean shouldScaleDown(int queueDepth, int queueCapacity, int activeThreads,
@@ -122,6 +130,7 @@ public class DynamicScaler {
     }
 
     /**
+     * 停止扩展监控。
      * Stop scaling monitor.
      */
     public void stop() {
@@ -138,6 +147,7 @@ public class DynamicScaler {
     }
 
     /**
+     * 获取当前总线程数。
      * Get current total thread count.
      */
     public int getTotalThreads() {

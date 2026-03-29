@@ -8,11 +8,20 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
+ * 拒绝策略处理器工厂。
  * Rejection policy handler factory.
  */
 @Slf4j
 public class RejectionPolicyHandler {
 
+    /**
+     * 根据拒绝策略创建处理器。
+     * Create handler based on rejection policy.
+     *
+     * @param policy   拒绝策略 / rejection policy
+     * @param taskName 任务名称 / task name
+     * @return 拒绝执行处理器 / rejected execution handler
+     */
     public static RejectedExecutionHandler create(RejectionPolicy policy, String taskName) {
         switch (policy) {
             case ABORT_WITH_ALERT:
@@ -28,6 +37,10 @@ public class RejectionPolicyHandler {
         }
     }
 
+    /**
+     * 带告警的终止处理器。
+     * Abort handler with alert.
+     */
     private static class AbortWithAlertHandler implements RejectedExecutionHandler {
         private final String taskName;
 
@@ -43,6 +56,10 @@ public class RejectionPolicyHandler {
         }
     }
 
+    /**
+     * 阻塞等待处理器。
+     * Block and wait handler.
+     */
     private static class BlockAndWaitHandler implements RejectedExecutionHandler {
         private final String taskName;
 

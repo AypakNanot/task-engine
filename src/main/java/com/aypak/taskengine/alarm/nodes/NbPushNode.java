@@ -9,23 +9,25 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 北向推送节点
- * 通过 HTTP 或其他方式推送告警到北向系统
+ * 北向推送节点。
+ * 通过 HTTP 或其他方式推送告警到北向系统。
+ * Northbound push node.
+ * Pushes alarms to northbound system via HTTP or other methods.
  */
 public class NbPushNode implements PipelineNode {
 
     private static final Logger log = LoggerFactory.getLogger(NbPushNode.class);
 
-    /** 推送成功计数 */
+    /** 推送成功计数 / Push success count */
     private final AtomicInteger successCount = new AtomicInteger(0);
 
-    /** 推送失败计数 */
+    /** 推送失败计数 / Push failure count */
     private final AtomicInteger failureCount = new AtomicInteger(0);
 
-    /** 最大重试次数 */
+    /** 最大重试次数 / Maximum retry attempts */
     private int maxRetries = 3;
 
-    /** 是否启用推送 */
+    /** 是否启用推送 / Whether push is enabled */
     private volatile boolean enabled = true;
 
     @Override
@@ -43,7 +45,7 @@ public class NbPushNode implements PipelineNode {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 执行推送（带重试）
+            // 执行推送（带重试）/ Execute push (with retry)
             boolean pushed = pushWithRetry(event, context);
 
             long latency = System.currentTimeMillis() - startTime;
@@ -70,7 +72,8 @@ public class NbPushNode implements PipelineNode {
     }
 
     /**
-     * 带重试的推送
+     * 带重试的推送。
+     * Push with retry.
      */
     private boolean pushWithRetry(AlarmEvent event, PipelineContext context) {
         int attempts = 0;
@@ -84,7 +87,7 @@ public class NbPushNode implements PipelineNode {
                 if (attempts < maxRetries) {
                     log.debug("Push attempt {} failed for alarm {}, retrying...",
                             attempts, event.getId());
-                    Thread.sleep(100 * attempts); // 递增延迟
+                    Thread.sleep(100 * attempts); // 递增延迟 / Incremental delay
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -100,19 +103,22 @@ public class NbPushNode implements PipelineNode {
     }
 
     /**
-     * 执行实际推送
-     * 子类可重写此方法实现具体的推送逻辑
+     * 执行实际推送。
+     * 子类可重写此方法实现具体的推送逻辑。
+     * Execute actual push.
+     * Subclasses can override this method to implement specific push logic.
      */
     protected boolean doPush(AlarmEvent event, PipelineContext context) {
         // 默认实现：模拟推送成功
-        // 实际实现应该：
-        // 1. 构建 HTTP 请求
-        // 2. 发送到北向系统
-        // 3. 处理响应
+        // Default implementation: simulate push success
+        // 实际实现应该：/ Actual implementation should:
+        // 1. 构建 HTTP 请求 / Build HTTP request
+        // 2. 发送到北向系统 / Send to northbound system
+        // 3. 处理响应 / Handle response
 
         log.debug("Pushing alarm {} to northbound system", event.getId());
 
-        // 模拟推送延迟
+        // 模拟推送延迟 / Simulate push delay
         try {
             Thread.sleep(1);
         } catch (InterruptedException e) {
@@ -124,28 +130,32 @@ public class NbPushNode implements PipelineNode {
     }
 
     /**
-     * 设置最大重试次数
+     * 设置最大重试次数。
+     * Set maximum retry attempts.
      */
     public void setMaxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
     }
 
     /**
-     * 设置是否启用推送
+     * 设置是否启用推送。
+     * Set whether push is enabled.
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * 获取推送成功计数
+     * 获取推送成功计数。
+     * Get push success count.
      */
     public int getSuccessCount() {
         return successCount.get();
     }
 
     /**
-     * 获取推送失败计数
+     * 获取推送失败计数。
+     * Get push failure count.
      */
     public int getFailureCount() {
         return failureCount.get();

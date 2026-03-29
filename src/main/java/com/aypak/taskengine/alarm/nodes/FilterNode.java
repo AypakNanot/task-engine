@@ -10,20 +10,22 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 过滤节点 - 本地过滤
- * 根据配置的过滤规则过滤无效告警
+ * 过滤节点 - 本地过滤。
+ * 根据配置的过滤规则过滤无效告警。
+ * Filter node - local filtering.
+ * Filters invalid alarms based on configured filter rules.
  */
 public class FilterNode implements PipelineNode {
 
     private static final Logger log = LoggerFactory.getLogger(FilterNode.class);
 
-    /** 过滤的告警类型集合 */
+    /** 过滤的告警类型集合 / Set of filtered alarm types */
     private final Set<String> filteredAlarmTypes = ConcurrentHashMap.newKeySet();
 
-    /** 过滤的设备 ID 集合 */
+    /** 过滤的设备 ID 集合 / Set of filtered device IDs */
     private final Set<String> filteredDeviceIds = ConcurrentHashMap.newKeySet();
 
-    /** 是否启用过滤 */
+    /** 是否启用过滤 / Whether filtering is enabled */
     private volatile boolean enabled = true;
 
     @Override
@@ -39,7 +41,7 @@ public class FilterNode implements PipelineNode {
 
         long startTime = System.currentTimeMillis();
 
-        // 检查告警类型是否被过滤
+        // 检查告警类型是否被过滤 / Check if alarm type is filtered
         if (filteredAlarmTypes.contains(event.getAlarmType())) {
             log.debug("Alarm {} filtered by alarmType: {}", event.getId(), event.getAlarmType());
             context.setDropReason("Filtered by alarmType: " + event.getAlarmType());
@@ -47,7 +49,7 @@ public class FilterNode implements PipelineNode {
             return false;
         }
 
-        // 检查设备 ID 是否被过滤
+        // 检查设备 ID 是否被过滤 / Check if device ID is filtered
         if (filteredDeviceIds.contains(event.getDeviceId())) {
             log.debug("Alarm {} filtered by deviceId: {}", event.getId(), event.getDeviceId());
             context.setDropReason("Filtered by deviceId: " + event.getDeviceId());
@@ -62,7 +64,8 @@ public class FilterNode implements PipelineNode {
     }
 
     /**
-     * 添加过滤的告警类型
+     * 添加过滤的告警类型。
+     * Add filtered alarm type.
      */
     public void addFilteredAlarmType(String alarmType) {
         filteredAlarmTypes.add(alarmType);
@@ -70,7 +73,8 @@ public class FilterNode implements PipelineNode {
     }
 
     /**
-     * 移除过滤的告警类型
+     * 移除过滤的告警类型。
+     * Remove filtered alarm type.
      */
     public void removeFilteredAlarmType(String alarmType) {
         filteredAlarmTypes.remove(alarmType);
@@ -78,7 +82,8 @@ public class FilterNode implements PipelineNode {
     }
 
     /**
-     * 添加过滤的设备 ID
+     * 添加过滤的设备 ID。
+     * Add filtered device ID.
      */
     public void addFilteredDeviceId(String deviceId) {
         filteredDeviceIds.add(deviceId);
@@ -86,7 +91,8 @@ public class FilterNode implements PipelineNode {
     }
 
     /**
-     * 移除过滤的设备 ID
+     * 移除过滤的设备 ID。
+     * Remove filtered device ID.
      */
     public void removeFilteredDeviceId(String deviceId) {
         filteredDeviceIds.remove(deviceId);
@@ -94,14 +100,16 @@ public class FilterNode implements PipelineNode {
     }
 
     /**
-     * 设置是否启用过滤
+     * 设置是否启用过滤。
+     * Set whether filtering is enabled.
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * 清空所有过滤规则
+     * 清空所有过滤规则。
+     * Clear all filter rules.
      */
     public void clearFilters() {
         filteredAlarmTypes.clear();

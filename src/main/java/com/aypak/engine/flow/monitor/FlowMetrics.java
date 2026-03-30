@@ -247,6 +247,7 @@ public class FlowMetrics {
         executionsInWindow.reset();
         ewmaResponseTime.set(0);
         queueDepth.set(0);
+        activeWorkers.set(0);
     }
 
     /**

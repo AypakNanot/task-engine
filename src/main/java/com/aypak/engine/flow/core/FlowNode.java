@@ -95,4 +95,63 @@ public interface FlowNode<K, T> {
     default void destroy() {
         // 默认空实现 / Default empty implementation
     }
+
+    /**
+     * 创建简单节点 - 仅处理逻辑，自动生成节点名称。
+     * Create a simple node with only processing logic, auto-generating node name.
+     *
+     * <p>便捷方法，用于快速创建测试节点或简单节点。</p>
+     * <p>Convenience method for quickly creating test nodes or simple nodes.</p>
+     *
+     * <p>使用示例 / Usage example:</p>
+     * <pre>{@code
+     * FlowNode<String, String> node = FlowNode.of("Validate", (event, context) -> {
+     *     return event.getPayload() != null;
+     * });
+     * }</pre>
+     *
+     * @param name    节点名称 / node name
+     * @param handler 处理函数 / processing function
+     * @param <K>     分片键类型 / shard key type
+     * @param <T>     负载类型 / payload type
+     * @return 简单节点实例 / simple node instance
+     */
+    static <K, T> FlowNode<K, T> of(String name, FlowHandler<K, T> handler) {
+        return new FlowNode<K, T>() {
+            @Override
+            public String getNodeName() {
+                return name;
+            }
+
+            @Override
+            public boolean process(FlowEvent<K, T> event, FlowContext context) throws Exception {
+                return handler.process(event, context);
+            }
+        };
+    }
+
+    /**
+     * 创建简单节点 - 使用默认节点名称。
+     * Create a simple node with default node name.
+     *
+     * @param handler 处理函数 / processing function
+     * @param <K>     分片键类型 / shard key type
+     * @param <T>     负载类型 / payload type
+     * @return 简单节点实例 / simple node instance
+     */
+    static <K, T> FlowNode<K, T> of(FlowHandler<K, T> handler) {
+        return of("Node", handler);
+    }
+
+    /**
+     * 流处理函数接口。
+     * Flow processing function interface.
+     *
+     * @param <K> 分片键类型 / shard key type
+     * @param <T> 负载类型 / payload type
+     */
+    @FunctionalInterface
+    interface FlowHandler<K, T> {
+        boolean process(FlowEvent<K, T> event, FlowContext context) throws Exception;
+    }
 }

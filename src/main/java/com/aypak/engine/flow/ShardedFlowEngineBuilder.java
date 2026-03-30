@@ -137,6 +137,31 @@ public class ShardedFlowEngineBuilder<K, T> {
     }
 
     /**
+     * 添加简单节点 - 使用处理函数和节点名称。
+     * Add simple node using processing function with node name.
+     *
+     * @param name    节点名称 / node name
+     * @param handler 处理函数 / processing function
+     * @return this builder
+     */
+    public ShardedFlowEngineBuilder<K, T> addNode(String name, FlowNode.FlowHandler<K, T> handler) {
+        this.nodes.add(FlowNode.of(name, handler));
+        return this;
+    }
+
+    /**
+     * 添加简单节点 - 使用默认节点名称。
+     * Add simple node with default node name.
+     *
+     * @param handler 处理函数 / processing function
+     * @return this builder
+     */
+    public ShardedFlowEngineBuilder<K, T> addNode(FlowNode.FlowHandler<K, T> handler) {
+        this.nodes.add(FlowNode.of(handler));
+        return this;
+    }
+
+    /**
      * 添加多个处理节点。
      * Add multiple processing nodes.
      *

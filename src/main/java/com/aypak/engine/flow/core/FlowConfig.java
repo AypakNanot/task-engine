@@ -228,6 +228,31 @@ public class FlowConfig<K, T> {
         }
 
         /**
+         * 添加简单节点 - 使用处理函数。
+         * Add simple node using processing function.
+         *
+         * @param name    节点名称 / node name
+         * @param handler 处理函数 / processing function
+         * @return 构建器 / builder
+         */
+        public Builder<K, T> addNode(String name, FlowNode.FlowHandler<K, T> handler) {
+            this.nodes.add(FlowNode.of(name, handler));
+            return this;
+        }
+
+        /**
+         * 添加简单节点 - 使用默认名称。
+         * Add simple node with default name.
+         *
+         * @param handler 处理函数 / processing function
+         * @return 构建器 / builder
+         */
+        public Builder<K, T> addNode(FlowNode.FlowHandler<K, T> handler) {
+            this.nodes.add(FlowNode.of(handler));
+            return this;
+        }
+
+        /**
          * 设置是否启用指标。
          * Set whether metrics enabled.
          */

@@ -64,9 +64,6 @@ public class NbFilterNode implements PipelineNode {
             return false;
         }
 
-        long latency = System.currentTimeMillis() - startTime;
-        context.recordNodeLatency(getNodeName(), latency);
-
         return true;
     }
 

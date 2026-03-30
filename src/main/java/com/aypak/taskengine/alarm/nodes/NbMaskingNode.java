@@ -59,9 +59,6 @@ public class NbMaskingNode implements PipelineNode {
             }
         }
 
-        long latency = System.currentTimeMillis() - startTime;
-        context.recordNodeLatency(getNodeName(), latency);
-
         return true;
     }
 

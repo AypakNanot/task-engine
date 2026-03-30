@@ -40,11 +40,8 @@ public class PersistenceNode implements PipelineNode {
             context.markPersisted();
             event.setStatus(AlarmEvent.ProcessingStatus.PERSISTED);
 
-            long latency = System.currentTimeMillis() - startTime;
-            context.recordNodeLatency(getNodeName(), latency);
-
             log.debug("Persistence node submitted alarm {} to batch executor in {}ms",
-                    event.getId(), latency);
+                    event.getId(), System.currentTimeMillis() - startTime);
 
             return true;
 

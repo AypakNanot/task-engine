@@ -38,11 +38,8 @@ public class AnalysisNode implements PipelineNode {
             // 3. 丰富告警数据 / Enrich alarm data
             enrichAlarm(event, context);
 
-            long latency = System.currentTimeMillis() - startTime;
-            context.recordNodeLatency(getNodeName(), latency);
-
             log.debug("Analysis node processed alarm {} in {}ms, severity: {}",
-                    event.getId(), latency, event.getSeverity());
+                    event.getId(), System.currentTimeMillis() - startTime, event.getSeverity());
 
             return true;
 

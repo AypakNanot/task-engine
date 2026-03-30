@@ -57,10 +57,7 @@ public class ReceiveNode implements PipelineNode {
         // 记录接收时间 / Record receive time
         event.setReceiveTime(System.currentTimeMillis());
 
-        long latency = System.currentTimeMillis() - startTime;
-        context.recordNodeLatency(getNodeName(), latency);
-
-        log.debug("Receive node processed alarm {} in {}ms", event.getId(), latency);
+        log.debug("Receive node processed alarm {} in {}ms", event.getId(), startTime);
         return true;
     }
 

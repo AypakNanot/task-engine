@@ -48,15 +48,12 @@ public class NbPushNode implements PipelineNode {
             // 执行推送（带重试）/ Execute push (with retry)
             boolean pushed = pushWithRetry(event, context);
 
-            long latency = System.currentTimeMillis() - startTime;
-            context.recordNodeLatency(getNodeName(), latency);
-
             if (pushed) {
                 successCount.incrementAndGet();
                 context.markNotified();
                 event.setStatus(AlarmEvent.ProcessingStatus.NOTIFIED);
                 log.debug("NB-Push node successfully pushed alarm {} in {}ms",
-                        event.getId(), latency);
+                        event.getId(), System.currentTimeMillis() - startTime);
             } else {
                 failureCount.incrementAndGet();
                 log.warn("NB-Push failed after retries for alarm {}", event.getId());

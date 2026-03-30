@@ -36,10 +36,7 @@ public class NbNotifyNode implements PipelineNode {
 
             context.set("nbNotificationReady", true);
 
-            long latency = System.currentTimeMillis() - startTime;
-            context.recordNodeLatency(getNodeName(), latency);
-
-            log.debug("NB-Notify node processed alarm {} in {}ms", event.getId(), latency);
+            log.debug("NB-Notify node processed alarm {} in {}ms", event.getId(), System.currentTimeMillis() - startTime);
 
             return true;
 

@@ -315,6 +315,8 @@ chore: maintenance
 perf: performance improvement
 ```
 
+**IMPORTANT**: Do NOT automatically commit code changes. Always ask for user confirmation before executing git commit or git push commands.
+
 ## Dependencies
 
 Key dependencies from pom.xml:

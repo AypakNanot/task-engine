@@ -121,6 +121,16 @@ public class TaskMetrics {
     }
 
     /**
+     * 获取当前 QPS（只读访问）。
+     * Get current QPS (read-only access).
+     *
+     * @return 当前 QPS / current QPS
+     */
+    public double getQps() {
+        return calculateQps(60000);
+    }
+
+    /**
      * 更新队列深度。
      * Update queue depth.
      */

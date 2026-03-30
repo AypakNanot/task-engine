@@ -2,11 +2,16 @@ package com.aypak.engine.task.executor;
 
 import com.aypak.engine.task.config.TaskEngineProperties;
 import com.aypak.engine.task.core.*;
+import com.aypak.engine.task.event.TaskFailureEvent;
+import com.aypak.engine.task.event.TaskRegisteredEvent;
+import com.aypak.engine.task.event.TaskSuccessEvent;
 import com.aypak.engine.task.monitor.TaskMetrics;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -23,13 +28,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Getter
-public class TaskEngineImpl implements TaskEngine {
+public class TaskEngineImpl implements TaskEngine, ApplicationEventPublisherAware {
 
     private final TaskRegistry registry;
     private final TaskThreadPoolFactory poolFactory;
     private final Map<String, TaskExecutor> executors = new ConcurrentHashMap<>();
     private final TaskEngineProperties properties;
     private DynamicScaler scaler;
+    private ApplicationEventPublisher eventPublisher;
 
     public TaskEngineImpl(TaskEngineProperties properties) {
         this.properties = properties;
@@ -39,6 +45,28 @@ public class TaskEngineImpl implements TaskEngine {
 
     public void setScaler(DynamicScaler scaler) {
         this.scaler = scaler;
+    }
+
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * 发布任务注册事件。
+     * Publish task registered event.
+     */
+    private void publishTaskRegistered(String taskName, TaskConfig config) {
+        if (eventPublisher != null) {
+            TaskRegisteredEvent<Void> event = new TaskRegisteredEvent<>(
+                    this,
+                    taskName,
+                    config.getTaskType().name(),
+                    config.getPriority().name(),
+                    null
+            );
+            eventPublisher.publishEvent(event);
+        }
     }
 
     /**
@@ -70,6 +98,9 @@ public class TaskEngineImpl implements TaskEngine {
 
         log.info("Task registered: {} [type={}, priority={}]",
                 taskName, config.getTaskType(), config.getPriority());
+
+        // 发布任务注册事件 / Publish task registered event
+        publishTaskRegistered(taskName, config);
     }
 
     /**
@@ -136,7 +167,8 @@ public class TaskEngineImpl implements TaskEngine {
         // 捕获上下文一次 / Capture context once
         String traceId = MDC.get("traceId");
         Map<String, String> mdcContext = MDC.getCopyOfContextMap();
-        TaskContext context = new TaskContext(traceId, mdcContext, System.currentTimeMillis());
+        long startTime = System.currentTimeMillis();
+        TaskContext context = new TaskContext(traceId, mdcContext, startTime);
 
         executor.execute(() -> {
             try {
@@ -150,18 +182,58 @@ public class TaskEngineImpl implements TaskEngine {
 
                 // 成功回调（仅当重写时）/ Success callback (only if overridden)
                 processor.onSuccess(payload);
+
+                // 发布成功事件 / Publish success event
+                long executionTime = System.currentTimeMillis() - startTime;
+                publishTaskSuccess(taskName, payload, executionTime);
             } catch (Throwable e) {
                 metrics.recordFailure();
                 // 仅在 debug 级别记录日志以减少开销 / Only log at debug level to reduce overhead
                 if (log.isDebugEnabled()) {
                     log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), e.getMessage());
                 }
+
+                // 发布失败事件 / Publish failure event
+                publishTaskFailure(taskName, payload, e);
+
                 processor.onFailure(payload, e);
                 throw e;
             } finally {
                 MDC.clear();
             }
         }, context);
+    }
+
+    /**
+     * 发布任务成功事件。
+     * Publish task success event.
+     */
+    private <T> void publishTaskSuccess(String taskName, T payload, long executionTime) {
+        if (eventPublisher != null) {
+            TaskSuccessEvent<T> event = new TaskSuccessEvent<>(
+                    this,
+                    taskName,
+                    payload,
+                    executionTime
+            );
+            eventPublisher.publishEvent(event);
+        }
+    }
+
+    /**
+     * 发布任务失败事件。
+     * Publish task failure event.
+     */
+    private <T> void publishTaskFailure(String taskName, T payload, Throwable error) {
+        if (eventPublisher != null) {
+            TaskFailureEvent<T> event = new TaskFailureEvent<>(
+                    this,
+                    taskName,
+                    payload,
+                    error
+            );
+            eventPublisher.publishEvent(event);
+        }
     }
 
     @Override

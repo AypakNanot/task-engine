@@ -5,6 +5,8 @@ import com.aypak.engine.task.executor.DynamicScaler;
 import com.aypak.engine.task.executor.TaskEngineImpl;
 import com.aypak.engine.task.monitor.MetricsCollector;
 import com.aypak.engine.task.monitor.QueueMonitor;
+import com.aypak.engine.task.monitor.TaskEngineMetricsBinder;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -109,5 +111,20 @@ public class TaskEngineAutoConfiguration {
     @ConditionalOnMissingBean
     public TaskEngineHealthIndicator taskEngineHealthIndicator(TaskEngineImpl taskEngine) {
         return new TaskEngineHealthIndicator(taskEngine);
+    }
+
+    /**
+     * 创建 Micrometer 指标绑定器。
+     * 仅在 Micrometer 可用时创建（通过 spring-boot-starter-actuator 自动引入）。
+     * Create Micrometer metrics binder.
+     * Only created when Micrometer is available (auto-imported via spring-boot-starter-actuator).
+     *
+     * @param taskEngine 任务引擎 / task engine
+     * @return Micrometer 指标绑定器 / Micrometer metrics binder
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MeterBinder taskEngineMetricsBinder(TaskEngineImpl taskEngine) {
+        return new TaskEngineMetricsBinder(taskEngine);
     }
 }

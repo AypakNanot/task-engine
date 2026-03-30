@@ -91,7 +91,9 @@ Task Engine provides a centralized task processing framework that:
 ### 2. Implement Task Processor
 
 ```java
-import com.aypak.taskengine.core.*;
+import com.aypak.engine.task.core.ITaskProcessor;
+import com.aypak.engine.task.core.TaskPriority;
+import com.aypak.engine.task.core.TaskType;
 
 public class AlertProcessor implements ITaskProcessor<String> {
 

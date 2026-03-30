@@ -33,6 +33,35 @@ TaskEngine 是一个高性能的 unified task processing center（统一任务�
 | Lombok | 最新 |
 | JUnit 5 | 测试框架 |
 
+### 1.3 包结构
+
+```
+com.aypak.engine.task
+├── core/               # 核心接口和枚举
+│   ├── TaskType.java       # 4 种任务类型
+│   ├── TaskPriority.java   # 优先级
+│   ├── RejectionPolicy.java# 拒绝策略
+│   ├── ITaskProcessor.java # 处理器接口
+│   ├── TaskConfig.java     # 配置 Builder
+│   ├── TaskContext.java    # 执行上下文
+│   └── DynamicConfig.java  # 动态配置
+├── executor/           # 线程池执行器
+│   ├── TaskEngine.java     # 对外接口
+│   ├── TaskEngineImpl.java # 主编排器
+│   ├── TaskExecutor.java   # 线程池封装
+│   ├── TaskRegistry.java   # 任务注册表
+│   └── NamedThreadFactory.java
+├── monitor/            # 监控指标
+│   ├── TaskMetrics.java    # 线程安全指标
+│   ├── MetricsCollector.java
+│   └── QueueMonitor.java   # 队列监控
+├── api/                # REST 端点
+│   └── TaskMonitorController.java
+└── config/             # Spring 配置
+    ├── TaskEngineProperties.java
+    └── TaskEngineAutoConfiguration.java
+```
+
 ---
 
 ## 2. 核心特性
@@ -161,7 +190,9 @@ task-engine:
 #### 步骤 2：创建任务处理器
 
 ```java
-import com.aypak.taskengine.core.*;
+import com.aypak.engine.task.core.ITaskProcessor;
+import com.aypak.engine.task.core.TaskPriority;
+import com.aypak.engine.task.core.TaskType;
 import org.springframework.stereotype.Component;
 
 @Component

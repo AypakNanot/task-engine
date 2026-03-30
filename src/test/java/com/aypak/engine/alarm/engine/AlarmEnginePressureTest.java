@@ -54,7 +54,7 @@ public class AlarmEnginePressureTest {
 
         // 使用简单数据源，不实际入库
         engine = new AlarmEngineImpl(new SimpleTestDataSource(), "INSERT INTO alarm_event VALUES (?,?,?,?,?,?,?,?)",
-                16, 5000, 50000, RejectPolicy.DROP);
+                16, 5000, RejectPolicy.DROP);
         engine.start();
         running = new AtomicBoolean(true);
         executor = Executors.newFixedThreadPool(100);

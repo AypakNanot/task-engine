@@ -34,10 +34,9 @@ public class AlarmEngineAutoConfiguration {
     @Bean
     public AlarmEngine alarmEngine(DataSource dataSource, AlarmEngineProperties properties) {
         log.info("Initializing AlarmEngine with properties: workerCount={}, workerQueueCapacity={}, " +
-                        "receiverQueueCapacity={}, rejectPolicy={}, batchSize={}, batchTimeoutMs={}ms",
+                        "rejectPolicy={}, batchSize={}, batchTimeoutMs={}ms",
                 properties.getWorkerCount(),
                 properties.getWorkerQueueCapacity(),
-                properties.getReceiverQueueCapacity(),
                 properties.getRejectPolicy(),
                 properties.getBatchSize(),
                 properties.getBatchTimeoutMs());
@@ -49,7 +48,6 @@ public class AlarmEngineAutoConfiguration {
                 getInsertSql(),
                 properties.getWorkerCount(),
                 properties.getWorkerQueueCapacity(),
-                properties.getReceiverQueueCapacity(),
                 parseRejectPolicy(properties.getRejectPolicy())
         );
 

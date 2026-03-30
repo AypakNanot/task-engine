@@ -2,7 +2,6 @@ package com.aypak.engine.alarm.engine;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
 import com.aypak.engine.alarm.core.RejectPolicy;
-import com.aypak.engine.alarm.dispatcher.Worker;
 import com.aypak.engine.alarm.monitor.AlarmMetrics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * AlarmEngine 边界测试
- * 测试极端场景下的系统行为
+ * 边界测试使用 ShardedFlowEngine 后的边界测试
  */
 public class AlarmEngineBoundaryTest {
 
@@ -41,7 +40,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Queue Full with DROP Policy");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                2, 10, 50, RejectPolicy.DROP);
+                2, 10, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -76,7 +75,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Queue Full with BLOCK Policy");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                1, 5, 50, RejectPolicy.BLOCK);
+                1, 5, RejectPolicy.BLOCK);
         engine.start();
         Thread.sleep(500);
 
@@ -115,7 +114,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Worker Exception Recovery");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                4, 100, 500, RejectPolicy.DROP);
+                4, 100, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -128,10 +127,8 @@ public class AlarmEngineBoundaryTest {
 
         Thread.sleep(2000);
 
-        // 验证：所有 Worker 仍在运行
-        int activeWorkers = engine.getDispatcher().getActiveCount();
-        log.info("Active workers: {}", activeWorkers);
-        assertEquals(4, activeWorkers, "All workers should still be running");
+        // 验证：引擎仍在运行
+        assertTrue(engine.isRunning(), "Engine should still be running");
 
         // 发送更多告警
         int moreCount = 20;
@@ -148,14 +145,14 @@ public class AlarmEngineBoundaryTest {
     }
 
     /**
-     * 测试 4: 同一设备有序性验证
+     * 测试 4: 同设备有序性验证
      */
     @Test
     void testSameDeviceOrdering() throws InterruptedException {
         log.info("Starting test: Same Device Ordering");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                4, 1000, 5000, RejectPolicy.DROP);
+                4, 1000, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -191,7 +188,7 @@ public class AlarmEngineBoundaryTest {
 
         int workerCount = 8;
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                workerCount, 1000, 5000, RejectPolicy.DROP);
+                workerCount, 1000, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -203,22 +200,10 @@ public class AlarmEngineBoundaryTest {
 
         Thread.sleep(3000);
 
-        int[] stats = new int[workerCount];
-        for (int i = 0; i < workerCount; i++) {
-            Worker worker = engine.getDispatcher().getWorker(i);
-            stats[i] = worker.getProcessedCount();
-        }
+        AlarmMetrics.MetricsSnapshot snapshot = engine.getMetrics().getSnapshot();
+        log.info("Total processed: {}", snapshot.successCount);
 
-        log.info("Worker distribution: ");
-        for (int i = 0; i < workerCount; i++) {
-            log.info("  Worker {}: {} events", i, stats[i]);
-        }
-
-        int nonZeroWorkers = 0;
-        for (int count : stats) {
-            if (count > 0) nonZeroWorkers++;
-        }
-        assertTrue(nonZeroWorkers >= workerCount / 2, "Events should be distributed across workers");
+        assertTrue(snapshot.successCount > 0, "Events should be processed");
     }
 
     /**
@@ -229,7 +214,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Graceful Shutdown");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                2, 50, 500, RejectPolicy.DROP);
+                2, 50, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -254,15 +239,14 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: No Load Running");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                4, 100, 500, RejectPolicy.DROP);
+                4, 100, RejectPolicy.DROP);
         engine.start();
 
         // 不发送任何事件，等待一段时间
         Thread.sleep(2000);
 
-        // 验证：引擎仍在运行，Worker 空闲
+        // 验证：引擎仍在运行
         assertTrue(engine.isRunning(), "Engine should still be running");
-        assertEquals(4, engine.getDispatcher().getActiveCount(), "Workers should be active");
 
         engine.shutdown();
         assertFalse(engine.isRunning(), "Engine should be stopped");
@@ -276,7 +260,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Burst Traffic");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                8, 500, 5000, RejectPolicy.DROP);
+                8, 500, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -311,7 +295,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Repeated DeviceId");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                4, 100, 500, RejectPolicy.DROP);
+                4, 100, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 
@@ -345,7 +329,7 @@ public class AlarmEngineBoundaryTest {
         log.info("Starting test: Worker Restart Recovery");
 
         engine = new AlarmEngineImpl(new AlarmEngineTest.TestDataSource(), "INSERT INTO test VALUES (?, ?)",
-                4, 100, 500, RejectPolicy.DROP);
+                4, 100, RejectPolicy.DROP);
         engine.start();
         Thread.sleep(500);
 

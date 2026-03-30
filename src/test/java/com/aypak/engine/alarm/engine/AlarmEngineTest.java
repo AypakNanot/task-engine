@@ -20,7 +20,7 @@ class AlarmEngineTest {
         String insertSql = "INSERT INTO test VALUES (?, ?)";
 
         // 当
-        AlarmEngineImpl engine = new AlarmEngineImpl(dataSource, insertSql, 4, 1000, 5000,
+        AlarmEngineImpl engine = new AlarmEngineImpl(dataSource, insertSql, 4, 1000,
                 RejectPolicy.DROP);
 
         // 则

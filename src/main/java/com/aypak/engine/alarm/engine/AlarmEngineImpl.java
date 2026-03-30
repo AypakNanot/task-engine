@@ -1,14 +1,15 @@
 package com.aypak.engine.alarm.engine;
 
+import com.aypak.engine.alarm.adapter.AlarmFlowAdapter;
+import com.aypak.engine.alarm.batch.BatchDBExecutor;
 import com.aypak.engine.alarm.core.AlarmEvent;
 import com.aypak.engine.alarm.core.PipelineNode;
 import com.aypak.engine.alarm.core.RejectPolicy;
-import com.aypak.engine.alarm.dispatcher.ShardDispatcher;
-import com.aypak.engine.alarm.nodes.*;
-import com.aypak.engine.alarm.receiver.AlarmReceiver;
-import com.aypak.engine.alarm.batch.BatchDBExecutor;
 import com.aypak.engine.alarm.monitor.AlarmMetrics;
-import com.aypak.engine.alarm.monitor.MonitorTask;
+import com.aypak.engine.alarm.nodes.*;
+import com.aypak.engine.flow.ShardedFlowEngine;
+import com.aypak.engine.flow.ShardedFlowEngineBuilder;
+import com.aypak.engine.flow.core.FlowEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,9 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 告警引擎实现
- * 整合所有组件，提供统一的告警处理接口
- * Alarm engine implementation.
+ * 告警引擎实现 - 基于 ShardedFlowEngine
+ * Alarm engine implementation based on ShardedFlowEngine.
  * Integrates all components and provides unified alarm processing interface.
  */
 public class AlarmEngineImpl implements AlarmEngine {
@@ -32,26 +32,14 @@ public class AlarmEngineImpl implements AlarmEngine {
     /** 默认 Worker 队列容量 / Default Worker queue capacity */
     private static final int DEFAULT_WORKER_QUEUE_CAPACITY = 5000;
 
-    /** 默认 Receiver 队列容量 / Default Receiver queue capacity */
-    private static final int DEFAULT_RECEIVER_QUEUE_CAPACITY = 50000;
-
-    /** 告警接收器 / Alarm receiver */
-    private final AlarmReceiver receiver;
-
-    /** 分片调度器 / Shard dispatcher */
-    private final ShardDispatcher dispatcher;
+    /** 分片流引擎 / Sharded flow engine */
+    private final ShardedFlowEngine<String, AlarmEvent> flowEngine;
 
     /** 批量数据库执行器 / Batch database executor */
     private final BatchDBExecutor dbExecutor;
 
     /** 告警指标 / Alarm metrics */
     private final AlarmMetrics metrics;
-
-    /** 监控任务 / Monitor task */
-    private final MonitorTask monitorTask;
-
-    /** 优雅停机处理器 / Graceful shutdown handler */
-    private final GracefulShutdown gracefulShutdown;
 
     /** 运行标志 / Running flag */
     private volatile boolean running = false;
@@ -64,7 +52,7 @@ public class AlarmEngineImpl implements AlarmEngine {
      */
     public AlarmEngineImpl(DataSource dataSource, String insertSql) {
         this(dataSource, insertSql, DEFAULT_WORKER_COUNT, DEFAULT_WORKER_QUEUE_CAPACITY,
-                DEFAULT_RECEIVER_QUEUE_CAPACITY, RejectPolicy.DROP);
+                RejectPolicy.DROP);
     }
 
     /**
@@ -74,42 +62,49 @@ public class AlarmEngineImpl implements AlarmEngine {
      * @param insertSql 插入 SQL 语句 / insert SQL statement
      * @param workerCount Worker 数量 / Worker count
      * @param workerQueueCapacity Worker 队列容量 / Worker queue capacity
-     * @param receiverQueueCapacity Receiver 队列容量 / Receiver queue capacity
      * @param rejectPolicy 拒绝策略 / rejection policy
      */
     public AlarmEngineImpl(DataSource dataSource, String insertSql,
                           int workerCount, int workerQueueCapacity,
-                          int receiverQueueCapacity, RejectPolicy rejectPolicy) {
+                          RejectPolicy rejectPolicy) {
         // 创建批量数据库执行器（必须在 createPipelineNodes 之前创建）
         // Create batch DB executor (must be created before createPipelineNodes)
         this.dbExecutor = new BatchDBExecutor(dataSource, insertSql);
 
-        // 创建告警指标（必须在 ShardDispatcher 之前创建）
-        // Create alarm metrics (must be created before ShardDispatcher)
+        // 创建告警指标
+        // Create alarm metrics
         this.metrics = new AlarmMetrics();
 
         // 创建流水线节点列表
         // Create pipeline nodes list
         List<PipelineNode> nodes = createPipelineNodes();
 
-        // 创建告警接收器
-        // Create alarm receiver
-        this.receiver = new AlarmReceiver(receiverQueueCapacity, rejectPolicy);
+        // 映射拒绝策略
+        // Map rejection policy
+        com.aypak.engine.flow.core.RejectPolicy flowRejectPolicy = mapRejectPolicy(rejectPolicy);
 
-        // 创建分片调度器
-        // Create shard dispatcher
-        this.dispatcher = new ShardDispatcher(workerCount, workerQueueCapacity, nodes, rejectPolicy, metrics);
+        // 创建分片流引擎构建器
+        // Create sharded flow engine builder
+        ShardedFlowEngineBuilder<String, AlarmEvent> builder = ShardedFlowEngine.<String, AlarmEvent>builder()
+                .name("AlarmEngine")
+                .shardCount(workerCount)
+                .queueCapacity(workerQueueCapacity)
+                .rejectPolicy(flowRejectPolicy)
+                .metricsEnabled(true);
 
-        // 创建监控任务
-        // Create monitor task
-        this.monitorTask = new MonitorTask(metrics, receiver, dispatcher);
+        // 将所有 PipelineNode 适配为 FlowNode 并添加到构建器
+        // Adapt all PipelineNode to FlowNode and add to builder
+        for (PipelineNode node : nodes) {
+            AlarmFlowAdapter adapter = new AlarmFlowAdapter(node);
+            builder.addNode(adapter);
+        }
 
-        // 创建优雅停机处理器
-        // Create graceful shutdown handler
-        this.gracefulShutdown = new GracefulShutdown(receiver, dispatcher, dbExecutor, 30);
+        // 构建引擎（不启动）
+        // Build engine (without starting)
+        this.flowEngine = builder.buildWithoutStart();
 
-        log.info("AlarmEngineImpl created with {} workers, workerQueueCapacity={}, receiverQueueCapacity={}, policy={}",
-                workerCount, workerQueueCapacity, receiverQueueCapacity, rejectPolicy);
+        log.info("AlarmEngineImpl created with {} workers, workerQueueCapacity={}, policy={}",
+                workerCount, workerQueueCapacity, rejectPolicy);
     }
 
     /**
@@ -152,6 +147,25 @@ public class AlarmEngineImpl implements AlarmEngine {
     }
 
     /**
+     * 映射拒绝策略
+     * Map rejection policy.
+     */
+    private com.aypak.engine.flow.core.RejectPolicy mapRejectPolicy(RejectPolicy policy) {
+        switch (policy) {
+            case DROP:
+                return com.aypak.engine.flow.core.RejectPolicy.DROP;
+            case BLOCK:
+                return com.aypak.engine.flow.core.RejectPolicy.BLOCK;
+            case CALLER_RUNS:
+                return com.aypak.engine.flow.core.RejectPolicy.CALLER_RUNS;
+            case DROP_OLDEST:
+                return com.aypak.engine.flow.core.RejectPolicy.DROP_OLDEST;
+            default:
+                return com.aypak.engine.flow.core.RejectPolicy.DROP;
+        }
+    }
+
+    /**
      * 启动引擎
      * Start engine.
      */
@@ -165,14 +179,7 @@ public class AlarmEngineImpl implements AlarmEngine {
         log.info("AlarmEngine starting...");
         log.info("===========================================");
 
-        // 启动分片调度器 / Start shard dispatcher
-        dispatcher.start();
-
-        // 启动监控任务 / Start monitor task
-        monitorTask.start();
-
-        // 注册优雅停机钩子 / Register graceful shutdown hook
-        gracefulShutdown.registerShutdownHook();
+        flowEngine.start();
 
         running = true;
 
@@ -191,13 +198,25 @@ public class AlarmEngineImpl implements AlarmEngine {
         // 记录进入指标 / Record incoming metric
         metrics.recordIncoming();
 
-        // 直接提交到分片调度器，receiver 仅用于监控指标
-        // Submit directly to shard dispatcher, receiver is only for monitoring metrics
-        return dispatcher.submit(event);
+        // 提交到流引擎，使用 deviceId 作为分片键
+        // Submit to flow engine with deviceId as shard key
+        FlowEvent<String, AlarmEvent> flowEvent = new FlowEvent<>(event.getDeviceId(), event);
+        return flowEngine.submit(flowEvent);
     }
 
     @Override
     public AlarmMetrics getMetrics() {
+        // 同步流引擎指标到告警指标（仅一次快照）
+        // Sync flow engine metrics to alarm metrics (one-time snapshot)
+        var flowMetrics = flowEngine.getMetrics();
+        if (flowMetrics != null) {
+            metrics.getSuccessCounter().reset();
+            metrics.getFailureCounter().reset();
+            metrics.getDroppedCounter().reset();
+            metrics.getSuccessCounter().add(flowMetrics.getSuccessCount().sum());
+            metrics.getFailureCounter().add(flowMetrics.getFailureCount().sum());
+            metrics.getDroppedCounter().add(flowMetrics.getDroppedCount().sum());
+        }
         return metrics;
     }
 
@@ -212,29 +231,11 @@ public class AlarmEngineImpl implements AlarmEngine {
             return;
         }
 
-        // 执行优雅停机 / Execute graceful shutdown
-        gracefulShutdown.shutdown();
-
-        // 停止监控任务 / Stop monitor task
-        monitorTask.stop();
-
+        log.info("Shutting down AlarmEngine...");
+        flowEngine.shutdown(30, java.util.concurrent.TimeUnit.SECONDS);
+        dbExecutor.shutdown();
         running = false;
-    }
-
-    /**
-     * 获取告警接收器
-     * Get alarm receiver.
-     */
-    public AlarmReceiver getReceiver() {
-        return receiver;
-    }
-
-    /**
-     * 获取分片调度器
-     * Get shard dispatcher.
-     */
-    public ShardDispatcher getDispatcher() {
-        return dispatcher;
+        log.info("AlarmEngine shut down completed");
     }
 
     /**

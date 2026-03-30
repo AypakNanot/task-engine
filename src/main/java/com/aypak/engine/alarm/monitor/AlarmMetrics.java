@@ -116,6 +116,14 @@ public class AlarmMetrics {
      * 获取成功计数
      * Get success count.
      */
+    public LongAdder getSuccessCounter() {
+        return successCount;
+    }
+
+    /**
+     * 获取成功计数
+     * Get success count.
+     */
     public long getSuccessCount() {
         return successCount.sum();
     }
@@ -124,8 +132,24 @@ public class AlarmMetrics {
      * 获取失败计数
      * Get failure count.
      */
+    public LongAdder getFailureCounter() {
+        return failureCount;
+    }
+
+    /**
+     * 获取失败计数
+     * Get failure count.
+     */
     public long getFailureCount() {
         return failureCount.sum();
+    }
+
+    /**
+     * 获取丢弃计数
+     * Get dropped count.
+     */
+    public LongAdder getDroppedCounter() {
+        return droppedCount;
     }
 
     /**

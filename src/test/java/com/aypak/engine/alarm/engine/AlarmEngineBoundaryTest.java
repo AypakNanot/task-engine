@@ -1,7 +1,7 @@
 package com.aypak.engine.alarm.engine;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.RejectPolicy;
+import com.aypak.engine.flow.core.RejectPolicy;
 import com.aypak.engine.alarm.monitor.AlarmMetrics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,7 @@
 package com.aypak.engine.alarm.engine;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.RejectPolicy;
+import com.aypak.engine.flow.core.RejectPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;

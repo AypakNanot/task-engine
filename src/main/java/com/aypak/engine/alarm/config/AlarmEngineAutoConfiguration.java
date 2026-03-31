@@ -1,8 +1,8 @@
 package com.aypak.engine.alarm.config;
 
-import com.aypak.engine.alarm.core.RejectPolicy;
 import com.aypak.engine.alarm.engine.AlarmEngine;
 import com.aypak.engine.alarm.engine.AlarmEngineImpl;
+import com.aypak.engine.flow.core.RejectPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

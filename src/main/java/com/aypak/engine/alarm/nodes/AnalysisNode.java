@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * Analysis node - business logic analysis.
  * Calculates alarm severity, performs correlation analysis, etc.
  */
-public class AnalysisNode implements PipelineNode {
+public class AnalysisNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(AnalysisNode.class);
 
@@ -25,26 +26,27 @@ public class AnalysisNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) throws Exception {
         long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         try {
             // 1. 计算告警严重度 / Calculate alarm severity
-            calculateSeverity(event, context);
+            calculateSeverity(alarmEvent, context);
 
             // 2. 关联分析（可扩展）/ Correlation analysis (extensible)
-            correlateAlarm(event, context);
+            correlateAlarm(alarmEvent, context);
 
             // 3. 丰富告警数据 / Enrich alarm data
-            enrichAlarm(event, context);
+            enrichAlarm(alarmEvent, context);
 
             log.debug("Analysis node processed alarm {} in {}ms, severity: {}",
-                    event.getId(), System.currentTimeMillis() - startTime, event.getSeverity());
+                    alarmEvent.getId(), System.currentTimeMillis() - startTime, alarmEvent.getSeverity());
 
             return true;
 
         } catch (Exception e) {
-            log.error("Analysis failed for alarm {}", event.getId(), e);
+            log.error("Analysis failed for alarm {}", alarmEvent.getId(), e);
             throw e;
         }
     }
@@ -55,7 +57,7 @@ public class AnalysisNode implements PipelineNode {
      * Calculate alarm severity.
      * Can adjust severity level based on business rules.
      */
-    private void calculateSeverity(AlarmEvent event, PipelineContext context) {
+    private void calculateSeverity(AlarmEvent event, FlowContext context) {
         if (!enableSeverityBoost) {
             return;
         }
@@ -94,7 +96,7 @@ public class AnalysisNode implements PipelineNode {
      * Correlation analysis.
      * Can be extended to implement alarm correlation, root cause analysis, etc.
      */
-    private void correlateAlarm(AlarmEvent event, PipelineContext context) {
+    private void correlateAlarm(AlarmEvent event, FlowContext context) {
         // 预留扩展点 / Reserved extension point
         // 可以实现：/ Can implement:
         // - 相同时段同一设备的告警关联 / Alarm correlation for same device in same time period
@@ -108,7 +110,7 @@ public class AnalysisNode implements PipelineNode {
      * Enrich alarm data.
      * Add additional context information.
      */
-    private void enrichAlarm(AlarmEvent event, PipelineContext context) {
+    private void enrichAlarm(AlarmEvent event, FlowContext context) {
         // 预留扩展点 / Reserved extension point
         // 可以实现：/ Can implement:
         // - 添加设备信息 / Add device information
@@ -125,8 +127,8 @@ public class AnalysisNode implements PipelineNode {
     }
 
     @Override
-    public void onFailure(AlarmEvent event, Throwable error) {
-        log.error("AnalysisNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    public void onFailure(FlowEvent<String, AlarmEvent> event, Throwable error) {
+        log.error("AnalysisNode failed for alarm {}: {}", event.getPayload().getId(), error.getMessage());
     }
 
     /**

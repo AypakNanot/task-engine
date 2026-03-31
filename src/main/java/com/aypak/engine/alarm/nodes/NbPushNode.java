@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Northbound push node.
  * Pushes alarms to northbound system via HTTP or other methods.
  */
-public class NbPushNode implements PipelineNode {
+public class NbPushNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(NbPushNode.class);
 
@@ -36,34 +37,35 @@ public class NbPushNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         if (!enabled) {
-            log.debug("NB-Push disabled, skipping alarm {}", event.getId());
+            log.debug("NB-Push disabled, skipping alarm {}", event.getPayload().getId());
             return true;
         }
 
         long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         try {
             // 执行推送（带重试）/ Execute push (with retry)
-            boolean pushed = pushWithRetry(event, context);
+            boolean pushed = pushWithRetry(alarmEvent, context);
 
             if (pushed) {
                 successCount.incrementAndGet();
                 context.markNotified();
-                event.setStatus(AlarmEvent.ProcessingStatus.NOTIFIED);
+                alarmEvent.setStatus(AlarmEvent.ProcessingStatus.NOTIFIED);
                 log.debug("NB-Push node successfully pushed alarm {} in {}ms",
-                        event.getId(), System.currentTimeMillis() - startTime);
+                        alarmEvent.getId(), System.currentTimeMillis() - startTime);
             } else {
                 failureCount.incrementAndGet();
-                log.warn("NB-Push failed after retries for alarm {}", event.getId());
+                log.warn("NB-Push failed after retries for alarm {}", alarmEvent.getId());
             }
 
             return pushed;
 
         } catch (Exception e) {
             failureCount.incrementAndGet();
-            log.error("NB-Push failed for alarm {}", event.getId(), e);
+            log.error("NB-Push failed for alarm {}", alarmEvent.getId(), e);
             throw e;
         }
     }
@@ -72,7 +74,7 @@ public class NbPushNode implements PipelineNode {
      * 带重试的推送。
      * Push with retry.
      */
-    private boolean pushWithRetry(AlarmEvent event, PipelineContext context) {
+    private boolean pushWithRetry(AlarmEvent event, FlowContext context) {
         int attempts = 0;
         while (attempts < maxRetries) {
             try {
@@ -105,7 +107,7 @@ public class NbPushNode implements PipelineNode {
      * Execute actual push.
      * Subclasses can override this method to implement specific push logic.
      */
-    protected boolean doPush(AlarmEvent event, PipelineContext context) {
+    protected boolean doPush(AlarmEvent event, FlowContext context) {
         // 默认实现：模拟推送成功
         // Default implementation: simulate push success
         // 实际实现应该：/ Actual implementation should:
@@ -159,7 +161,7 @@ public class NbPushNode implements PipelineNode {
     }
 
     @Override
-    public void onFailure(AlarmEvent event, Throwable error) {
-        log.error("NbPushNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    public void onFailure(FlowEvent<String, AlarmEvent> event, Throwable error) {
+        log.error("NbPushNode failed for alarm {}: {}", event.getPayload().getId(), error.getMessage());
     }
 }

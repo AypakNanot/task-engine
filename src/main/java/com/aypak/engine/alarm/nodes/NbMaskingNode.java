@@ -2,8 +2,9 @@ package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
 import com.aypak.engine.alarm.core.MaskingRule;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Northbound masking node.
  * Filters alarms based on customer masking rules.
  */
-public class NbMaskingNode implements PipelineNode {
+public class NbMaskingNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(NbMaskingNode.class);
 
@@ -33,15 +34,15 @@ public class NbMaskingNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         if (!enabled) {
             return true;
         }
 
-        long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         // 获取客户 ID
-        String customerId = event.getPayload("customerId");
+        String customerId = alarmEvent.getPayload("customerId");
         if (customerId == null) {
             return true;
         }
@@ -50,10 +51,11 @@ public class NbMaskingNode implements PipelineNode {
         CopyOnWriteArrayList<MaskingRule> rules = customerRules.get(customerId);
         if (rules != null) {
             for (MaskingRule rule : rules) {
-                if (rule.matches(event)) {
+                if (rule.matches(alarmEvent)) {
                     log.debug("Alarm {} masked by customer rule {} for customer {}",
-                            event.getId(), rule.getId(), customerId);
-                    context.setDropReason("Masked by customer rule: " + rule.getId());
+                            alarmEvent.getId(), rule.getId(), customerId);
+                    context.set("dropReason", "Masked by customer rule: " + rule.getId());
+                    context.stop();
                     return false;
                 }
             }
@@ -64,6 +66,7 @@ public class NbMaskingNode implements PipelineNode {
 
     /**
      * 添加客户屏蔽规则
+     * Add customer masking rule
      */
     public void addRule(String customerId, MaskingRule rule) {
         customerRules
@@ -74,6 +77,7 @@ public class NbMaskingNode implements PipelineNode {
 
     /**
      * 移除客户屏蔽规则
+     * Remove customer masking rule
      */
     public void removeRule(String customerId, String ruleId) {
         CopyOnWriteArrayList<MaskingRule> rules = customerRules.get(customerId);
@@ -85,6 +89,7 @@ public class NbMaskingNode implements PipelineNode {
 
     /**
      * 设置是否启用屏蔽
+     * Set whether masking is enabled
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;

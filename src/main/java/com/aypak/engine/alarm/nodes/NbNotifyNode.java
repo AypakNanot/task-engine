@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * Northbound notification preparation node.
  * Responsible for converting alarms to northbound interface format.
  */
-public class NbNotifyNode implements PipelineNode {
+public class NbNotifyNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(NbNotifyNode.class);
 
@@ -22,8 +23,9 @@ public class NbNotifyNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         try {
             // 转换为北向通知格式 / Convert to northbound notification format
@@ -36,18 +38,18 @@ public class NbNotifyNode implements PipelineNode {
 
             context.set("nbNotificationReady", true);
 
-            log.debug("NB-Notify node processed alarm {} in {}ms", event.getId(), System.currentTimeMillis() - startTime);
+            log.debug("NB-Notify node processed alarm {} in {}ms", alarmEvent.getId(), System.currentTimeMillis() - startTime);
 
             return true;
 
         } catch (Exception e) {
-            log.error("NB-Notify failed for alarm {}", event.getId(), e);
+            log.error("NB-Notify failed for alarm {}", alarmEvent.getId(), e);
             throw e;
         }
     }
 
     @Override
-    public void onFailure(AlarmEvent event, Throwable error) {
-        log.error("NbNotifyNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    public void onFailure(FlowEvent<String, AlarmEvent> event, Throwable error) {
+        log.error("NbNotifyNode failed for alarm {}: {}", event.getPayload().getId(), error.getMessage());
     }
 }

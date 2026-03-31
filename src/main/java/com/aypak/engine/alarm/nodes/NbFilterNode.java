@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Northbound filter node.
  * Filters alarms based on customer subscription rules.
  */
-public class NbFilterNode implements PipelineNode {
+public class NbFilterNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(NbFilterNode.class);
 
@@ -31,15 +32,15 @@ public class NbFilterNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         if (!enabled) {
             return true;
         }
 
-        long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         // 获取客户 ID（从 payload 或 context）/ Get customer ID (from payload or context)
-        String customerId = event.getPayload("customerId");
+        String customerId = alarmEvent.getPayload("customerId");
         if (customerId == null) {
             // 没有指定客户，默认通过 / No customer specified, allow by default
             return true;
@@ -50,17 +51,19 @@ public class NbFilterNode implements PipelineNode {
         if (subscriptions == null || subscriptions.isEmpty()) {
             // 客户没有订阅任何告警类型 / Customer has no subscriptions
             log.debug("Alarm {} filtered: customer {} has no subscriptions",
-                    event.getId(), customerId);
-            context.setDropReason("No subscription for customer " + customerId);
+                    alarmEvent.getId(), customerId);
+            context.set("dropReason", "No subscription for customer " + customerId);
+            context.stop();
             return false;
         }
 
         // 检查告警类型是否在订阅中 / Check if alarm type is in subscription
-        if (!subscriptions.contains(event.getAlarmType()) &&
+        if (!subscriptions.contains(alarmEvent.getAlarmType()) &&
             !subscriptions.contains("*")) {
             log.debug("Alarm {} filtered: customer {} not subscribed to type {}",
-                    event.getId(), customerId, event.getAlarmType());
-            context.setDropReason("Not subscribed: " + event.getAlarmType());
+                    alarmEvent.getId(), customerId, alarmEvent.getAlarmType());
+            context.set("dropReason", "Not subscribed: " + alarmEvent.getAlarmType());
+            context.stop();
             return false;
         }
 

@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Filter node - local filtering.
  * Filters invalid alarms based on configured filter rules.
  */
-public class FilterNode implements PipelineNode {
+public class FilterNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(FilterNode.class);
 
@@ -34,26 +35,28 @@ public class FilterNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         if (!enabled) {
             return true;
         }
 
-        long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         // 检查告警类型是否被过滤 / Check if alarm type is filtered
-        if (filteredAlarmTypes.contains(event.getAlarmType())) {
-            log.debug("Alarm {} filtered by alarmType: {}", event.getId(), event.getAlarmType());
-            context.setDropReason("Filtered by alarmType: " + event.getAlarmType());
-            event.setStatus(AlarmEvent.ProcessingStatus.DROPPED);
+        if (filteredAlarmTypes.contains(alarmEvent.getAlarmType())) {
+            log.debug("Alarm {} filtered by alarmType: {}", alarmEvent.getId(), alarmEvent.getAlarmType());
+            context.set("dropReason", "Filtered by alarmType: " + alarmEvent.getAlarmType());
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.DROPPED);
+            context.stop();
             return false;
         }
 
         // 检查设备 ID 是否被过滤 / Check if device ID is filtered
-        if (filteredDeviceIds.contains(event.getDeviceId())) {
-            log.debug("Alarm {} filtered by deviceId: {}", event.getId(), event.getDeviceId());
-            context.setDropReason("Filtered by deviceId: " + event.getDeviceId());
-            event.setStatus(AlarmEvent.ProcessingStatus.DROPPED);
+        if (filteredDeviceIds.contains(alarmEvent.getDeviceId())) {
+            log.debug("Alarm {} filtered by deviceId: {}", alarmEvent.getId(), alarmEvent.getDeviceId());
+            context.set("dropReason", "Filtered by deviceId: " + alarmEvent.getDeviceId());
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.DROPPED);
+            context.stop();
             return false;
         }
 

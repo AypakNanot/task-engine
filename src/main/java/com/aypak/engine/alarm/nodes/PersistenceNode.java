@@ -2,8 +2,9 @@ package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.batch.BatchDBExecutor;
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +14,7 @@ import org.slf4j.LoggerFactory;
  * Persistence node - batch persistence.
  * Submits alarms to batch executor for database writing.
  */
-public class PersistenceNode implements PipelineNode {
+public class PersistenceNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(PersistenceNode.class);
 
@@ -29,31 +30,32 @@ public class PersistenceNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) {
         long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         try {
             // 提交到批量执行器 / Submit to batch executor
-            batchExecutor.submit(event);
+            batchExecutor.submit(alarmEvent);
 
             // 标记为已提交持久化 / Mark as submitted for persistence
             context.markPersisted();
-            event.setStatus(AlarmEvent.ProcessingStatus.PERSISTED);
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.PERSISTED);
 
             log.debug("Persistence node submitted alarm {} to batch executor in {}ms",
-                    event.getId(), System.currentTimeMillis() - startTime);
+                    alarmEvent.getId(), System.currentTimeMillis() - startTime);
 
             return true;
 
         } catch (Exception e) {
-            log.error("Persistence failed for alarm {}", event.getId(), e);
+            log.error("Persistence failed for alarm {}", alarmEvent.getId(), e);
             throw e;
         }
     }
 
     @Override
-    public void onFailure(AlarmEvent event, Throwable error) {
-        log.error("PersistenceNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    public void onFailure(FlowEvent<String, AlarmEvent> event, Throwable error) {
+        log.error("PersistenceNode failed for alarm {}: {}", event.getPayload().getId(), error.getMessage());
     }
 
     /**

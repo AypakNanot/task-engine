@@ -1,15 +1,14 @@
 package com.aypak.engine.alarm.engine;
 
-import com.aypak.engine.alarm.adapter.AlarmFlowAdapter;
 import com.aypak.engine.alarm.batch.BatchDBExecutor;
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineNode;
 import com.aypak.engine.alarm.core.RejectPolicy;
 import com.aypak.engine.alarm.monitor.AlarmMetrics;
 import com.aypak.engine.alarm.nodes.*;
 import com.aypak.engine.flow.ShardedFlowEngine;
 import com.aypak.engine.flow.ShardedFlowEngineBuilder;
 import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,16 +74,10 @@ public class AlarmEngineImpl implements AlarmEngine {
         // Create alarm metrics
         this.metrics = new AlarmMetrics();
 
-        // 创建流水线节点列表
-        // Create pipeline nodes list
-        List<PipelineNode> nodes = createPipelineNodes();
-
-        // 映射拒绝策略
-        // Map rejection policy
-        com.aypak.engine.flow.core.RejectPolicy flowRejectPolicy = mapRejectPolicy(rejectPolicy);
-
         // 创建分片流引擎构建器
         // Create sharded flow engine builder
+        com.aypak.engine.flow.core.RejectPolicy flowRejectPolicy = mapRejectPolicy(rejectPolicy);
+
         ShardedFlowEngineBuilder<String, AlarmEvent> builder = ShardedFlowEngine.<String, AlarmEvent>builder()
                 .name("AlarmEngine")
                 .shardCount(workerCount)
@@ -92,12 +85,17 @@ public class AlarmEngineImpl implements AlarmEngine {
                 .rejectPolicy(flowRejectPolicy)
                 .metricsEnabled(true);
 
-        // 将所有 PipelineNode 适配为 FlowNode 并添加到构建器
-        // Adapt all PipelineNode to FlowNode and add to builder
-        for (PipelineNode node : nodes) {
-            AlarmFlowAdapter adapter = new AlarmFlowAdapter(node);
-            builder.addNode(adapter);
-        }
+        // 添加 9 个 FlowNode 到构建器
+        // Add 9 FlowNodes to builder
+        builder.addNode(new ReceiveNode());
+        builder.addNode(new FilterNode());
+        builder.addNode(new MaskingNode());
+        builder.addNode(new AnalysisNode());
+        builder.addNode(new PersistenceNode(dbExecutor));
+        builder.addNode(new NbNotifyNode());
+        builder.addNode(new NbFilterNode());
+        builder.addNode(new NbMaskingNode());
+        builder.addNode(new NbPushNode());
 
         // 构建引擎（不启动）
         // Build engine (without starting)
@@ -105,45 +103,6 @@ public class AlarmEngineImpl implements AlarmEngine {
 
         log.info("AlarmEngineImpl created with {} workers, workerQueueCapacity={}, policy={}",
                 workerCount, workerQueueCapacity, rejectPolicy);
-    }
-
-    /**
-     * 创建流水线节点列表
-     * Create pipeline nodes list.
-     */
-    private List<PipelineNode> createPipelineNodes() {
-        List<PipelineNode> nodes = new ArrayList<>(9);
-
-        // 1. ReceiveNode - 接收节点 / Receive node
-        nodes.add(new ReceiveNode());
-
-        // 2. FilterNode - 本地过滤节点 / Local filter node
-        nodes.add(new FilterNode());
-
-        // 3. MaskingNode - 本地屏蔽节点 / Local masking node
-        nodes.add(new MaskingNode());
-
-        // 4. AnalysisNode - 业务分析节点 / Business analysis node
-        nodes.add(new AnalysisNode());
-
-        // 5. PersistenceNode - 持久化节点 / Persistence node
-        nodes.add(new PersistenceNode(dbExecutor));
-
-        // 6. NB-NotifyNode - 北向通知准备节点 / Northbound notify preparation node
-        nodes.add(new NbNotifyNode());
-
-        // 7. NB-FilterNode - 北向过滤节点 / Northbound filter node
-        nodes.add(new NbFilterNode());
-
-        // 8. NB-MaskingNode - 北向屏蔽节点 / Northbound masking node
-        nodes.add(new NbMaskingNode());
-
-        // 9. NB-PushNode - 北向推送节点 / Northbound push node
-        nodes.add(new NbPushNode());
-
-        log.info("Pipeline nodes created: 9 nodes from Receive to NB-Push");
-
-        return nodes;
     }
 
     /**

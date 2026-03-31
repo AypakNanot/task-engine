@@ -1,8 +1,9 @@
 package com.aypak.engine.alarm.nodes;
 
 import com.aypak.engine.alarm.core.AlarmEvent;
-import com.aypak.engine.alarm.core.PipelineContext;
-import com.aypak.engine.alarm.core.PipelineNode;
+import com.aypak.engine.flow.core.FlowContext;
+import com.aypak.engine.flow.core.FlowEvent;
+import com.aypak.engine.flow.core.FlowNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +13,7 @@ import org.slf4j.LoggerFactory;
  * Receive node - first node in the pipeline.
  * Responsible for alarm format validation and required field verification.
  */
-public class ReceiveNode implements PipelineNode {
+public class ReceiveNode implements FlowNode<String, AlarmEvent> {
 
     private static final Logger log = LoggerFactory.getLogger(ReceiveNode.class);
 
@@ -22,48 +23,49 @@ public class ReceiveNode implements PipelineNode {
     }
 
     @Override
-    public boolean process(AlarmEvent event, PipelineContext context) throws Exception {
+    public boolean process(FlowEvent<String, AlarmEvent> event, FlowContext context) throws Exception {
         long startTime = System.currentTimeMillis();
+        AlarmEvent alarmEvent = event.getPayload();
 
         // 验证必填字段 / Validate required fields
-        if (event.getId() == null || event.getId().isEmpty()) {
+        if (alarmEvent.getId() == null || alarmEvent.getId().isEmpty()) {
             log.warn("Alarm missing required field: id");
-            event.setStatus(AlarmEvent.ProcessingStatus.FAILED);
-            event.setErrorMessage("Missing required field: id");
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.FAILED);
+            alarmEvent.setErrorMessage("Missing required field: id");
             return false;
         }
 
-        if (event.getDeviceId() == null || event.getDeviceId().isEmpty()) {
-            log.warn("Alarm {} missing required field: deviceId", event.getId());
-            event.setStatus(AlarmEvent.ProcessingStatus.FAILED);
-            event.setErrorMessage("Missing required field: deviceId");
+        if (alarmEvent.getDeviceId() == null || alarmEvent.getDeviceId().isEmpty()) {
+            log.warn("Alarm {} missing required field: deviceId", alarmEvent.getId());
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.FAILED);
+            alarmEvent.setErrorMessage("Missing required field: deviceId");
             return false;
         }
 
-        if (event.getAlarmType() == null || event.getAlarmType().isEmpty()) {
-            log.warn("Alarm {} missing required field: alarmType", event.getId());
-            event.setStatus(AlarmEvent.ProcessingStatus.FAILED);
-            event.setErrorMessage("Missing required field: alarmType");
+        if (alarmEvent.getAlarmType() == null || alarmEvent.getAlarmType().isEmpty()) {
+            log.warn("Alarm {} missing required field: alarmType", alarmEvent.getId());
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.FAILED);
+            alarmEvent.setErrorMessage("Missing required field: alarmType");
             return false;
         }
 
-        if (event.getOccurTime() == null) {
-            log.warn("Alarm {} missing required field: occurTime", event.getId());
-            event.setStatus(AlarmEvent.ProcessingStatus.FAILED);
-            event.setErrorMessage("Missing required field: occurTime");
+        if (alarmEvent.getOccurTime() == null) {
+            log.warn("Alarm {} missing required field: occurTime", alarmEvent.getId());
+            alarmEvent.setStatus(AlarmEvent.ProcessingStatus.FAILED);
+            alarmEvent.setErrorMessage("Missing required field: occurTime");
             return false;
         }
 
         // 记录接收时间 / Record receive time
-        event.setReceiveTime(System.currentTimeMillis());
+        alarmEvent.setReceiveTime(System.currentTimeMillis());
 
-        log.debug("Receive node processed alarm {} in {}ms", event.getId(), startTime);
+        log.debug("Receive node processed alarm {} in {}ms", alarmEvent.getId(), System.currentTimeMillis() - startTime);
         return true;
     }
 
     @Override
-    public void onFailure(AlarmEvent event, Throwable error) {
-        log.error("ReceiveNode failed for alarm {}: {}", event.getId(), error.getMessage());
+    public void onFailure(FlowEvent<String, AlarmEvent> event, Throwable error) {
+        log.error("ReceiveNode failed for alarm {}: {}", event.getPayload().getId(), error.getMessage());
     }
 
     /**

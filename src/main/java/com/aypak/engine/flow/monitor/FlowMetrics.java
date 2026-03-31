@@ -97,6 +97,16 @@ public class FlowMetrics {
     }
 
     /**
+     * 记录接收（批量）。
+     * Record receive in batch.
+     *
+     * @param count 接收数量 / receive count
+     */
+    public void recordReceive(int count) {
+        receivedCount.add(count);
+    }
+
+    /**
      * 更新 EWMA 平均响应时间。
      * Update EWMA for average response time.
      *

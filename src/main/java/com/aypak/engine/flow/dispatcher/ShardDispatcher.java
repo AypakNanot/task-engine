@@ -162,6 +162,48 @@ public class ShardDispatcher<K, T> {
     }
 
     /**
+     * 批量提交事件。
+     * Submit events in batch.
+     * 根据分片键哈希值路由到对应的 Worker。
+     * Routes to corresponding Worker based on shard key hash.
+     *
+     * @param events 事件列表 / event list
+     * @return 成功提交的事件数量 / number of successfully submitted events
+     */
+    public int submit(java.util.List<FlowEvent<K, T>> events) {
+        if (shutdown) {
+            log.warn("Dispatcher is shut down, rejecting batch events");
+            return 0;
+        }
+
+        int successCount = 0;
+        submitCount.addAndGet(events.size());
+
+        for (FlowEvent<K, T> event : events) {
+            // 计算 shard 索引
+            // Calculate shard index
+            int shardIndex = getShardIndex(event.getShardKey());
+            FlowWorker<K, T> worker = workers[shardIndex];
+
+            // 根据拒绝策略处理
+            // Handle based on rejection policy
+            boolean submitted = switch (rejectPolicy) {
+                case DROP -> handleDrop(worker, event);
+                case DROP_OLDEST -> handleDropOldest(worker, event);
+                case BLOCK -> handleBlock(worker, event);
+                case CALLER_RUNS -> handleCallerRuns(worker, event);
+                default -> handleDrop(worker, event);
+            };
+
+            if (submitted) {
+                successCount++;
+            }
+        }
+
+        return successCount;
+    }
+
+    /**
      * DROP 策略：队列满时丢弃新事件。
      * DROP policy: drop new event when queue is full.
      */

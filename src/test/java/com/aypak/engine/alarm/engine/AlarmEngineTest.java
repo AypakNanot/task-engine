@@ -108,6 +108,56 @@ class AlarmEngineTest {
                 "Events should be processed (success or failure), but got success=0, failure=0");
     }
 
+    @Test
+    void testBatchSubmit() throws InterruptedException {
+        // 给定
+        TestDataSource dataSource = new TestDataSource();
+        AlarmEngineImpl engine = new AlarmEngineImpl(dataSource, "INSERT INTO test VALUES (?, ?)");
+        engine.start();
+
+        // 当：批量提交 50 个告警
+        int batchSize = 50;
+        java.util.List<AlarmEvent> events = new java.util.ArrayList<>();
+        for (int i = 0; i < batchSize; i++) {
+            events.add(createTestEvent());
+        }
+
+        int acceptedCount = engine.submit(events);
+
+        // 则
+        assertEquals(batchSize, acceptedCount, "All events should be accepted");
+
+        // 等待处理完成
+        Thread.sleep(3000);
+
+        // 获取指标
+        var metrics = engine.getMetrics().getSnapshot();
+        System.out.println("Batch test - Success count: " + metrics.successCount);
+        System.out.println("Batch test - Failure count: " + metrics.failureCount);
+        System.out.println("Batch test - Dropped count: " + metrics.droppedCount);
+
+        // 清理
+        engine.shutdown();
+
+        // 验证：告警应该被处理
+        assertTrue(metrics.successCount > 0 || metrics.failureCount > 0,
+                "Events should be processed (success or failure)");
+    }
+
+    @Test
+    void testBatchSubmitBeforeStart() {
+        // 给定
+        TestDataSource dataSource = new TestDataSource();
+        AlarmEngineImpl engine = new AlarmEngineImpl(dataSource, "INSERT INTO test VALUES (?, ?)");
+        java.util.List<AlarmEvent> events = java.util.List.of(createTestEvent());
+
+        // 当
+        int acceptedCount = engine.submit(events);
+
+        // 则
+        assertEquals(0, acceptedCount, "Events should be rejected before engine starts");
+    }
+
     /**
      * 创建测试告警事件
      */

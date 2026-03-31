@@ -164,6 +164,25 @@ public class AlarmEngineImpl implements AlarmEngine {
     }
 
     @Override
+    public int submit(java.util.List<AlarmEvent> events) {
+        if (!running) {
+            log.warn("AlarmEngine is not running, rejecting batch events");
+            return 0;
+        }
+
+        // 记录进入指标 / Record incoming metric
+        metrics.recordIncoming(events.size());
+
+        // 批量提交到流引擎，使用 deviceId 作为分片键
+        // Submit to flow engine in batch with deviceId as shard key
+        java.util.List<FlowEvent<String, AlarmEvent>> flowEvents = new java.util.ArrayList<>(events.size());
+        for (AlarmEvent event : events) {
+            flowEvents.add(new FlowEvent<>(event.getDeviceId(), event));
+        }
+        return flowEngine.submit(flowEvents);
+    }
+
+    @Override
     public AlarmMetrics getMetrics() {
         // 同步流引擎指标到告警指标（仅一次快照）
         // Sync flow engine metrics to alarm metrics (one-time snapshot)

@@ -95,6 +95,20 @@ public class ShardedFlowEngineImpl<K, T> implements ShardedFlowEngine<K, T> {
     }
 
     @Override
+    public int submit(java.util.List<FlowEvent<K, T>> events) {
+        if (!running) {
+            log.warn("Engine {} is not running, rejecting batch events", config.getName());
+            return 0;
+        }
+
+        if (metrics != null) {
+            metrics.recordReceive(events.size());
+        }
+
+        return dispatcher.submit(events);
+    }
+
+    @Override
     public FlowMetrics getMetrics() {
         return metrics;
     }

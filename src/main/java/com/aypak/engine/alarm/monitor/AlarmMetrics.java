@@ -49,6 +49,16 @@ public class AlarmMetrics {
     }
 
     /**
+     * 记录进入的告警（批量）
+     * Record incoming alarms in batch.
+     * @param count 告警数量 / alarm count
+     */
+    public void recordIncoming(int count) {
+        incomingCount.add(count);
+        updateQPS(count);
+    }
+
+    /**
      * 记录成功处理
      * Record successful processing.
      */
@@ -247,6 +257,26 @@ public class AlarmMetrics {
         }
 
         windowCount.incrementAndGet();
+    }
+
+    /**
+     * 更新 QPS（批量调用）
+     * Update QPS (called for batch events).
+     * @param count 事件数量 / event count
+     */
+    private void updateQPS(int count) {
+        long now = System.currentTimeMillis();
+        long start = windowStartTime.get();
+
+        if (now - start >= 1000) {
+            // 新的秒窗口
+            // New second window
+            long countInWindow = windowCount.getAndSet(0);
+            qps.set(countInWindow);
+            windowStartTime.set(now);
+        }
+
+        windowCount.addAndGet(count);
     }
 
     /**

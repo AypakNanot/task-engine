@@ -46,6 +46,15 @@ public interface ShardedFlowEngine<K, T> {
     boolean submit(FlowEvent<K, T> event);
 
     /**
+     * 批量提交事件。
+     * Submit events in batch.
+     *
+     * @param events 事件列表 / event list
+     * @return 成功接收的事件数量 / number of successfully received events
+     */
+    int submit(java.util.List<FlowEvent<K, T>> events);
+
+    /**
      * 获取流指标。
      * Get flow metrics.
      *

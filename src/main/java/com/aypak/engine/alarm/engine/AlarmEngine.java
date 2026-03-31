@@ -19,6 +19,14 @@ public interface AlarmEngine {
     boolean submit(AlarmEvent event);
 
     /**
+     * 批量提交告警事件
+     * Submit alarm events in batch.
+     * @param events 告警事件列表 / alarm event list
+     * @return 成功接收的事件数量 / number of successfully received events
+     */
+    int submit(java.util.List<AlarmEvent> events);
+
+    /**
      * 获取告警指标
      * Get alarm metrics.
      * @return 告警指标 / alarm metrics

@@ -1,5 +1,6 @@
 package com.aypak.engine.flow.dispatcher;
 
+import com.aypak.engine.flow.core.FlowContext;
 import com.aypak.engine.flow.core.FlowEvent;
 import com.aypak.engine.flow.core.FlowNode;
 import com.aypak.engine.flow.core.RejectPolicy;
@@ -260,13 +261,43 @@ public class ShardDispatcher<K, T> {
         if (worker.submit(event)) {
             return true;
         }
-        // 队列满时在调用者线程中处理
+        // 队列满时在调用者线程中直接处理
         // Process in caller thread when queue is full
         log.debug("Queue full on worker {}, processing in caller thread", worker.getWorkerId());
-        droppedCount.incrementAndGet();
-        // 简化：这里仍然尝试提交，如果失败则返回 false
-        // Simplified: still try to submit, return false if failed
-        return false;
+        try {
+            // 直接调用 Worker 的 run 方法来处理一个事件
+            // This is a simplified implementation - in reality,
+            // CALLER_RUNS would need more sophisticated handling
+            event.setStatus(FlowEvent.ProcessingStatus.PROCESSING);
+            for (FlowNode<K, T> node : nodes) {
+                try {
+                    boolean shouldContinue = node.process(event, new FlowContext());
+                    if (!shouldContinue) {
+                        break;
+                    }
+                } catch (Exception e) {
+                    node.onFailure(event, e);
+                    if (node.isCritical()) {
+                        event.setStatus(FlowEvent.ProcessingStatus.FAILED);
+                        if (metrics != null) {
+                            metrics.recordFailure();
+                        }
+                        return true;
+                    }
+                }
+            }
+            event.setStatus(FlowEvent.ProcessingStatus.COMPLETED);
+            if (metrics != null) {
+                metrics.recordSuccess();
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("CALLER_RUNS failed to process event", e);
+            if (metrics != null) {
+                metrics.recordFailure();
+            }
+            return true; // 仍然认为已处理
+        }
     }
 
     /**

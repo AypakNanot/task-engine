@@ -15,16 +15,25 @@
     <description>task-engine</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Aypak Development Team</name>
+            <email>dev@aypak.com</email>
+            <organization>Aypak</organization>
+            <organizationUrl>https://github.com/aypak</organizationUrl>
+        </developer>
     </developers>
     <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
+        <connection>scm:git:git://github.com/aypak/task-engine.git</connection>
+        <developerConnection>scm:git:ssh://github.com:aypak/task-engine.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/aypak/task-engine</url>
     </scm>
     <properties>
         <java.version>17</java.version>

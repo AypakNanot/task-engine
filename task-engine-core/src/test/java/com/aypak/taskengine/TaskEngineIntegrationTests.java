@@ -1,5 +1,6 @@
 package com.aypak.taskengine;
 
+import com.aypak.taskengine.config.TaskEngineAutoConfiguration;
 import com.aypak.taskengine.core.*;
 import com.aypak.taskengine.executor.TaskEngine;
 import org.junit.jupiter.api.BeforeEach;
@@ -7,13 +8,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = TaskEngineApplication.class)
+@Import(TaskEngineAutoConfiguration.class)
 class TaskEngineIntegrationTests {
 
     @Autowired

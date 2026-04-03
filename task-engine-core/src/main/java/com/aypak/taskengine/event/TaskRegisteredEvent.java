@@ -1,11 +1,14 @@
 package com.aypak.taskengine.event;
 
+import lombok.Getter;
+
 /**
  * 任务注册事件。
  * Event fired when a task is registered.
  *
  * @param <T> 任务负载类型 / task payload type
  */
+@Getter
 public class TaskRegisteredEvent<T> extends TaskEvent<T> {
 
     private final String taskType;
@@ -26,25 +29,5 @@ public class TaskRegisteredEvent<T> extends TaskEvent<T> {
         super(source, taskName, payload);
         this.taskType = taskType;
         this.priority = priority;
-    }
-
-    /**
-     * 获取任务类型。
-     * Get task type.
-     *
-     * @return 任务类型 / task type
-     */
-    public String getTaskType() {
-        return taskType;
-    }
-
-    /**
-     * 获取优先级。
-     * Get priority.
-     *
-     * @return 优先级 / priority
-     */
-    public String getPriority() {
-        return priority;
     }
 }

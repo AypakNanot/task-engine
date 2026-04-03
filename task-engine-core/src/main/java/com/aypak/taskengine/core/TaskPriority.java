@@ -1,9 +1,14 @@
 package com.aypak.taskengine.core;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * 任务优先级枚举，用于调度优先级。
  * Task priority enumeration for scheduling priority.
  */
+@Getter
+@RequiredArgsConstructor
 public enum TaskPriority {
 
     /**
@@ -25,12 +30,4 @@ public enum TaskPriority {
     LOW(1);
 
     private final int level;
-
-    TaskPriority(int level) {
-        this.level = level;
-    }
-
-    public int getLevel() {
-        return level;
-    }
 }

@@ -1,5 +1,6 @@
 package com.aypak.taskengine.event;
 
+import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -8,6 +9,7 @@ import org.springframework.context.ApplicationEvent;
  *
  * @param <T> 任务负载类型 / task payload type
  */
+@Getter
 public abstract class TaskEvent<T> extends ApplicationEvent {
 
     private final String taskName;
@@ -25,26 +27,6 @@ public abstract class TaskEvent<T> extends ApplicationEvent {
         super(source);
         this.taskName = taskName;
         this.payload = payload;
-    }
-
-    /**
-     * 获取任务名称。
-     * Get task name.
-     *
-     * @return 任务名称 / task name
-     */
-    public String getTaskName() {
-        return taskName;
-    }
-
-    /**
-     * 获取任务负载。
-     * Get task payload.
-     *
-     * @return 任务负载 / task payload
-     */
-    public T getPayload() {
-        return payload;
     }
 
     /**

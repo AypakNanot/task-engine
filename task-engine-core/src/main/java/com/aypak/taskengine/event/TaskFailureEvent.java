@@ -1,11 +1,14 @@
 package com.aypak.taskengine.event;
 
+import lombok.Getter;
+
 /**
  * 任务执行失败事件。
  * Event fired when a task execution fails.
  *
  * @param <T> 任务负载类型 / task payload type
  */
+@Getter
 public class TaskFailureEvent<T> extends TaskEvent<T> {
 
     private final Throwable error;
@@ -25,25 +28,5 @@ public class TaskFailureEvent<T> extends TaskEvent<T> {
         super(source, taskName, payload);
         this.error = error;
         this.errorMessage = error != null ? error.getMessage() : "Unknown error";
-    }
-
-    /**
-     * 获取异常。
-     * Get exception.
-     *
-     * @return 异常 / exception
-     */
-    public Throwable getError() {
-        return error;
-    }
-
-    /**
-     * 获取错误消息。
-     * Get error message.
-     *
-     * @return 错误消息 / error message
-     */
-    public String getErrorMessage() {
-        return errorMessage;
     }
 }

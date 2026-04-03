@@ -1,11 +1,16 @@
 package com.aypak.taskengine.core;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * 任务类型枚举，用于隔离策略。
  * 每种类型都有专用的线程池，具有特定的特性。
  * Task type enumeration for isolation strategy.
  * Each type has dedicated thread pool with specific characteristics.
  */
+@Getter
+@RequiredArgsConstructor
 public enum TaskType {
 
     /**
@@ -48,17 +53,9 @@ public enum TaskType {
      */
     BACKGROUND("BACKGROUND");
 
-    private final String prefix;
-
-    TaskType(String prefix) {
-        this.prefix = prefix;
-    }
-
     /**
      * Thread name prefix for this task type.
      * Format: {prefix}-{taskName}-{id}
      */
-    public String getPrefix() {
-        return prefix;
-    }
+    private final String prefix;
 }

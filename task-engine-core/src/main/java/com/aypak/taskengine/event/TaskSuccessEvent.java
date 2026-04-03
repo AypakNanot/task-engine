@@ -1,11 +1,14 @@
 package com.aypak.taskengine.event;
 
+import lombok.Getter;
+
 /**
  * 任务执行成功事件。
  * Event fired when a task execution succeeds.
  *
  * @param <T> 任务负载类型 / task payload type
  */
+@Getter
 public class TaskSuccessEvent<T> extends TaskEvent<T> {
 
     private final long executionTimeMs;
@@ -23,15 +26,5 @@ public class TaskSuccessEvent<T> extends TaskEvent<T> {
             long executionTimeMs) {
         super(source, taskName, payload);
         this.executionTimeMs = executionTimeMs;
-    }
-
-    /**
-     * 获取执行时间。
-     * Get execution time.
-     *
-     * @return 执行时间（毫秒） / execution time in milliseconds
-     */
-    public long getExecutionTimeMs() {
-        return executionTimeMs;
     }
 }

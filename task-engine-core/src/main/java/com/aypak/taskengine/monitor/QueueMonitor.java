@@ -62,12 +62,13 @@ public class QueueMonitor {
                 double utilization = (queueDepth * 100.0) / queueCapacity;
 
                 if (utilization >= defaultThreshold) {
-                    log.warn("[{}] Queue depth: {} / {} ({}% > threshold {}%) ALERT",
+                    log.warn("[{}] Queue depth: {} / {} ({}% >= threshold {}%) ALERT",
                             taskName, queueDepth, queueCapacity,
                             String.format("%.1f", utilization), defaultThreshold);
                 } else {
-                    log.debug("[{}] Queue depth: {} / {} ({:.1f}%)",
-                            taskName, queueDepth, queueCapacity, utilization);
+                    log.info("[{}] Queue depth: {} / {} ({}%)",
+                            taskName, queueDepth, queueCapacity,
+                            String.format("%.1f", utilization));
                 }
             }
         }

@@ -25,10 +25,6 @@ public class TaskMetrics {
     private final LongAdder failureCount = new LongAdder();
     private final LongAdder executionsInWindow = new LongAdder();
 
-    // 平均执行时间计算的总执行时间
-    // Total execution time for average calculation
-    private final LongAdder totalExecutionTimeMs = new LongAdder();
-
     // QPS 跟踪（滑动窗口）
     // QPS tracking (sliding window)
     private final AtomicLong windowStartTime = new AtomicLong(System.currentTimeMillis());
@@ -59,7 +55,6 @@ public class TaskMetrics {
      */
     public void recordSuccess(long executionTimeMs) {
         successCount.increment();
-        totalExecutionTimeMs.add(executionTimeMs);
         executionsInWindow.increment();
         updateEwma(executionTimeMs);
     }
@@ -183,7 +178,6 @@ public class TaskMetrics {
     public void reset() {
         successCount.reset();
         failureCount.reset();
-        totalExecutionTimeMs.reset();
         executionsInWindow.reset();
         windowStartTime.set(System.currentTimeMillis());
         ewmaResponseTime.set(0);

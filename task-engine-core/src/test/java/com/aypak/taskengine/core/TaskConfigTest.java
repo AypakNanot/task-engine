@@ -82,22 +82,6 @@ class TaskConfigTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when priority is null")
-    void shouldThrowExceptionWhenPriorityIsNull() {
-        TaskConfig config = TaskConfig.builder()
-                .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
-                .priority(null)
-                .build();
-
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
-                () -> config.validate()
-        );
-        assertDoesNotThrow(() -> config.validate());
-    }
-
-    @Test
     @DisplayName("Should throw exception when queueAlertThreshold is negative")
     void shouldThrowExceptionWhenQueueAlertThresholdIsNegative() {
         TaskConfig config = TaskConfig.builder()

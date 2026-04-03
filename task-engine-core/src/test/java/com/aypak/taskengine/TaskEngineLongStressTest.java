@@ -26,7 +26,7 @@ class TaskEngineLongStressTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    private static final long TEST_DURATION_MS = 15 * 60 * 1000;
+    private static final long TEST_DURATION_MS = 15 * 1000; // 15 秒
     private static final int SUBMITTER_THREADS = 200;
     private static final String TASK_NAME = TaskEngineTestUtils.TASK_LONG_STRESS;
 

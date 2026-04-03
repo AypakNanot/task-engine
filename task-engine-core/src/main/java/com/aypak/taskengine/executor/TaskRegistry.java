@@ -46,8 +46,8 @@ public class TaskRegistry {
         }
         this.metrics.put(taskName, metrics);
 
-        log.info("Registered task: {} [type={}, priority={}]",
-                taskName, config.getTaskType(), config.getPriority());
+        log.info("Registered task: {} [type={}]",
+                taskName, config.getTaskType());
     }
 
     /**

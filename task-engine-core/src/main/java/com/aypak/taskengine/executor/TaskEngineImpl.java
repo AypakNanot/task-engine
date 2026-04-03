@@ -62,7 +62,6 @@ public class TaskEngineImpl implements TaskEngine, ApplicationEventPublisherAwar
                     this,
                     taskName,
                     config.getTaskType().name(),
-                    config.getPriority().name(),
                     null
             );
             eventPublisher.publishEvent(event);
@@ -96,8 +95,8 @@ public class TaskEngineImpl implements TaskEngine, ApplicationEventPublisherAwar
                 : getDefaultMaxSize(config.getTaskType());
         metrics.setPoolSizes(maxPoolSize, maxPoolSize);
 
-        log.info("Task registered: {} [type={}, priority={}]",
-                taskName, config.getTaskType(), config.getPriority());
+        log.info("Task registered: {} [type={}]",
+                taskName, config.getTaskType());
 
         // 发布任务注册事件 / Publish task registered event
         publishTaskRegistered(taskName, config);

@@ -2,7 +2,6 @@ package com.aypak.taskengine.executor;
 
 import com.aypak.taskengine.core.ITaskProcessor;
 import com.aypak.taskengine.core.TaskConfig;
-import com.aypak.taskengine.core.TaskPriority;
 import com.aypak.taskengine.core.TaskType;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import org.junit.jupiter.api.DisplayName;
@@ -304,7 +303,6 @@ class TaskRegistryTest {
         return TaskConfig.builder()
                 .taskName(taskName)
                 .taskType(type)
-                .priority(TaskPriority.MEDIUM)
                 .build();
     }
 
@@ -322,11 +320,6 @@ class TaskRegistryTest {
         @Override
         public TaskType getTaskType() {
             return TaskType.HIGH_FREQ;
-        }
-
-        @Override
-        public TaskPriority getPriority() {
-            return TaskPriority.MEDIUM;
         }
 
         @Override

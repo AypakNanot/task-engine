@@ -2,7 +2,6 @@ package com.aypak.taskengine;
 
 import com.aypak.taskengine.core.ITaskProcessor;
 import com.aypak.taskengine.core.TaskConfig;
-import com.aypak.taskengine.core.TaskPriority;
 import com.aypak.taskengine.core.TaskType;
 import com.aypak.taskengine.executor.TaskEngine;
 
@@ -98,13 +97,11 @@ public final class TaskEngineTestUtils {
     public static class SimpleTestProcessor implements ITaskProcessor<TestPayload> {
         private final String taskName;
         private final TaskType taskType;
-        private final TaskPriority priority;
         private final AtomicInteger counter = new AtomicInteger(0);
 
-        public SimpleTestProcessor(String taskName, TaskType taskType, TaskPriority priority) {
+        public SimpleTestProcessor(String taskName, TaskType taskType) {
             this.taskName = taskName;
             this.taskType = taskType;
-            this.priority = priority;
         }
 
         @Override
@@ -112,9 +109,6 @@ public final class TaskEngineTestUtils {
 
         @Override
         public TaskType getTaskType() { return taskType; }
-
-        @Override
-        public TaskPriority getPriority() { return priority; }
 
         @Override
         public void process(TestPayload payload) {

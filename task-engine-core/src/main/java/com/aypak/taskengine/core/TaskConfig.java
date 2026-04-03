@@ -30,14 +30,6 @@ public class TaskConfig {
     private final TaskType taskType;
 
     /**
-     * 用于调度的任务优先级。
-     * 必填 - 影响调度决策。
-     * Task priority for scheduling.
-     * Required - affects scheduling decisions.
-     */
-    private final TaskPriority priority;
-
-    /**
      * 核心线程池大小覆盖。
      * 可选 - 如果未指定则使用类型默认值。
      * Core pool size override.
@@ -108,9 +100,6 @@ public class TaskConfig {
         }
         if (taskType == null) {
             throw new IllegalArgumentException("taskType is required");
-        }
-        if (priority == null) {
-            throw new IllegalArgumentException("priority is required");
         }
         if (queueAlertThreshold != null && (queueAlertThreshold < 0 || queueAlertThreshold > 100)) {
             throw new IllegalArgumentException("queueAlertThreshold must be between 0 and 100");

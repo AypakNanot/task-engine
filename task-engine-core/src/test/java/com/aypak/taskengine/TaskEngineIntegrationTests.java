@@ -32,7 +32,6 @@ class TaskEngineIntegrationTests {
             taskEngine.register(TaskConfig.builder()
                     .taskName("HighFreqAlert")
                     .taskType(TaskType.HIGH_FREQ)
-                    .priority(TaskPriority.HIGH)
                     .queueCapacity(1000)
                     .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
                     .build(), new AlertProcessor());
@@ -42,7 +41,6 @@ class TaskEngineIntegrationTests {
             taskEngine.register(TaskConfig.builder()
                     .taskName("BackgroundCleanup")
                     .taskType(TaskType.BACKGROUND)
-                    .priority(TaskPriority.LOW)
                     .queueCapacity(100)
                     .rejectionPolicy(RejectionPolicy.DISCARD_OLDEST)
                     .build(), new CleanupProcessor());
@@ -52,7 +50,6 @@ class TaskEngineIntegrationTests {
             taskEngine.register(TaskConfig.builder()
                     .taskName("InitTask")
                     .taskType(TaskType.INIT)
-                    .priority(TaskPriority.HIGH)
                     .build(), new InitProcessor());
         }
     }
@@ -134,9 +131,6 @@ class TaskEngineIntegrationTests {
         public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
 
         @Override
-        public TaskPriority getPriority() { return TaskPriority.HIGH; }
-
-        @Override
         public void process(String context) {
             // Simulate work
             sleep(10);
@@ -151,9 +145,6 @@ class TaskEngineIntegrationTests {
         public TaskType getTaskType() { return TaskType.BACKGROUND; }
 
         @Override
-        public TaskPriority getPriority() { return TaskPriority.LOW; }
-
-        @Override
         public void process(String context) {
             sleep(50);
         }
@@ -165,9 +156,6 @@ class TaskEngineIntegrationTests {
 
         @Override
         public TaskType getTaskType() { return TaskType.INIT; }
-
-        @Override
-        public TaskPriority getPriority() { return TaskPriority.HIGH; }
 
         @Override
         public void process(String context) {

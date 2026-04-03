@@ -29,15 +29,6 @@ public interface ITaskProcessor<T> {
     TaskType getTaskType();
 
     /**
-     * 用于调度决策的任务优先级。
-     * 返回：HIGH、MEDIUM、LOW 之一。
-     * Task priority for scheduling decisions.
-     *
-     * @return one of HIGH, MEDIUM, LOW
-     */
-    TaskPriority getPriority();
-
-    /**
      * 使用给定上下文执行任务。
      * Execute the task with given context.
      *

@@ -45,10 +45,9 @@ public class TaskEventListener {
     @EventListener
     @Async
     public void handleTaskRegistered(TaskRegisteredEvent<?> event) {
-        log.info("Task registered: {} [type={}, priority={}]",
+        log.info("Task registered: {} [type={}]",
                 event.getTaskName(),
-                event.getTaskType(),
-                event.getPriority());
+                event.getTaskType());
     }
 
     /**

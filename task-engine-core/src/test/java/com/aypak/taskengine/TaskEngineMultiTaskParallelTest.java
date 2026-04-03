@@ -41,26 +41,25 @@ class TaskEngineMultiTaskParallelTest {
     @BeforeEach
     void setup() {
         // Register multiple task types to test isolation
-        registerTask(TaskEngineTestUtils.TASK_HIGH_FREQ, TaskType.HIGH_FREQ, TaskPriority.HIGH,
+        registerTask(TaskEngineTestUtils.TASK_HIGH_FREQ, TaskType.HIGH_FREQ,
                 cpuCount * 4, cpuCount * 8, 5000, 80, RejectionPolicy.CALLER_RUNS);
 
-        registerTask(TaskEngineTestUtils.TASK_BACKGROUND, TaskType.BACKGROUND, TaskPriority.LOW,
+        registerTask(TaskEngineTestUtils.TASK_BACKGROUND, TaskType.BACKGROUND,
                 4, 8, 100, 90, RejectionPolicy.DISCARD_OLDEST);
 
-        registerTask(TaskEngineTestUtils.TASK_INIT, TaskType.INIT, TaskPriority.HIGH,
+        registerTask(TaskEngineTestUtils.TASK_INIT, TaskType.INIT,
                 2, 4, 10, 80, RejectionPolicy.ABORT_WITH_ALERT);
 
-        registerTask(TaskEngineTestUtils.TASK_CRON, TaskType.CRON, TaskPriority.MEDIUM,
+        registerTask(TaskEngineTestUtils.TASK_CRON, TaskType.CRON,
                 cpuCount, cpuCount * 2, 1000, 80, RejectionPolicy.CALLER_RUNS);
     }
 
-    private void registerTask(String name, TaskType type, TaskPriority priority,
+    private void registerTask(String name, TaskType type,
                               int corePoolSize, int maxPoolSize, int queueCapacity,
                               int alertThreshold, RejectionPolicy policy) {
         TaskEngineTestUtils.registerTaskSafely(taskEngine, TaskConfig.builder()
                 .taskName(name)
                 .taskType(type)
-                .priority(priority)
                 .corePoolSize(corePoolSize)
                 .maxPoolSize(maxPoolSize)
                 .queueCapacity(queueCapacity)
@@ -292,15 +291,6 @@ class TaskEngineMultiTaskParallelTest {
 
         @Override
         public TaskType getTaskType() { return taskType; }
-
-        @Override
-        public TaskPriority getPriority() {
-            return switch (taskType) {
-                case HIGH_FREQ, INIT -> TaskPriority.HIGH;
-                case CRON -> TaskPriority.MEDIUM;
-                case BACKGROUND -> TaskPriority.LOW;
-            };
-        }
 
         @Override
         public void process(TaskPayload payload) {

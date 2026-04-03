@@ -18,13 +18,11 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         assertNotNull(config);
         assertEquals("TestTask", config.getTaskName());
         assertEquals(TaskType.HIGH_FREQ, config.getTaskType());
-        assertEquals(TaskPriority.MEDIUM, config.getPriority());
     }
 
     @Test
@@ -33,7 +31,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         assertDoesNotThrow(() -> config.validate());
@@ -45,7 +42,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName(null)
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -61,7 +57,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("   ")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -77,7 +72,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(null)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -100,7 +94,7 @@ class TaskConfigTest {
                 IllegalArgumentException.class,
                 () -> config.validate()
         );
-        assertTrue(exception.getMessage().contains("priority"));
+        assertDoesNotThrow(() -> config.validate());
     }
 
     @Test
@@ -109,7 +103,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .queueAlertThreshold(-1)
                 .build();
 
@@ -126,7 +119,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .queueAlertThreshold(101)
                 .build();
 
@@ -143,7 +135,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .queueAlertThreshold(0)
                 .build();
 
@@ -156,7 +147,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .queueAlertThreshold(100)
                 .build();
 
@@ -169,7 +159,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("CronTask")
                 .taskType(TaskType.CRON)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -185,7 +174,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("CronTask")
                 .taskType(TaskType.CRON)
-                .priority(TaskPriority.MEDIUM)
                 .cronExpression("0 0 12 * * ?")
                 .build();
 
@@ -198,7 +186,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("CronTask")
                 .taskType(TaskType.CRON)
-                .priority(TaskPriority.MEDIUM)
                 .fixedRate(5000L)
                 .build();
 
@@ -211,7 +198,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("CronTask")
                 .taskType(TaskType.CRON)
-                .priority(TaskPriority.MEDIUM)
                 .fixedDelay(5000L)
                 .build();
 
@@ -224,19 +210,16 @@ class TaskConfigTest {
         TaskConfig initConfig = TaskConfig.builder()
                 .taskName("InitTask")
                 .taskType(TaskType.INIT)
-                .priority(TaskPriority.HIGH)
                 .build();
 
         TaskConfig highFreqConfig = TaskConfig.builder()
                 .taskName("HighFreqTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.MEDIUM)
                 .build();
 
         TaskConfig backgroundConfig = TaskConfig.builder()
                 .taskName("BackgroundTask")
                 .taskType(TaskType.BACKGROUND)
-                .priority(TaskPriority.LOW)
                 .build();
 
         assertDoesNotThrow(() -> initConfig.validate());
@@ -250,7 +233,6 @@ class TaskConfigTest {
         TaskConfig config = TaskConfig.builder()
                 .taskName("FullConfigTask")
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.HIGH)
                 .corePoolSize(8)
                 .maxPoolSize(16)
                 .queueCapacity(10000)
@@ -263,7 +245,6 @@ class TaskConfigTest {
 
         assertEquals("FullConfigTask", config.getTaskName());
         assertEquals(TaskType.HIGH_FREQ, config.getTaskType());
-        assertEquals(TaskPriority.HIGH, config.getPriority());
         assertEquals(8, config.getCorePoolSize());
         assertEquals(16, config.getMaxPoolSize());
         assertEquals(10000, config.getQueueCapacity());
@@ -281,13 +262,5 @@ class TaskConfigTest {
         assertEquals("CRON", TaskType.CRON.getPrefix());
         assertEquals("HIGH_FREQ", TaskType.HIGH_FREQ.getPrefix());
         assertEquals("BACKGROUND", TaskType.BACKGROUND.getPrefix());
-    }
-
-    @Test
-    @DisplayName("Should get correct level from TaskPriority")
-    void shouldGetCorrectLevelFromTaskPriority() {
-        assertEquals(3, TaskPriority.HIGH.getLevel());
-        assertEquals(2, TaskPriority.MEDIUM.getLevel());
-        assertEquals(1, TaskPriority.LOW.getLevel());
     }
 }

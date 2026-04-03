@@ -397,7 +397,6 @@ class TaskEngineImplTest {
         return TaskConfig.builder()
                 .taskName(taskName)
                 .taskType(type)
-                .priority(TaskPriority.MEDIUM)
                 .build();
     }
 
@@ -405,7 +404,6 @@ class TaskEngineImplTest {
         return TaskConfig.builder()
                 .taskName(taskName)
                 .taskType(TaskType.CRON)
-                .priority(TaskPriority.MEDIUM)
                 .cronExpression("0 0 12 * * ?")
                 .build();
     }
@@ -442,11 +440,6 @@ class TaskEngineImplTest {
         @Override
         public TaskType getTaskType() {
             return TaskType.HIGH_FREQ;
-        }
-
-        @Override
-        public TaskPriority getPriority() {
-            return TaskPriority.MEDIUM;
         }
 
         @Override

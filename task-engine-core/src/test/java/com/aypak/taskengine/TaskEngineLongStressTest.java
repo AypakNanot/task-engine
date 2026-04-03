@@ -37,7 +37,6 @@ class TaskEngineLongStressTest {
         TaskEngineTestUtils.registerTaskSafely(taskEngine, TaskConfig.builder()
                 .taskName(TASK_NAME)
                 .taskType(TaskType.HIGH_FREQ)
-                .priority(TaskPriority.HIGH)
                 .corePoolSize(cpuCount * 8)
                 .maxPoolSize(cpuCount * 16)
                 .queueCapacity(100000)
@@ -169,7 +168,6 @@ class TaskEngineLongStressTest {
     static class FastTaskProcessor implements ITaskProcessor<TaskPayload> {
         public String getTaskName() { return TASK_NAME; }
         public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
-        public TaskPriority getPriority() { return TaskPriority.HIGH; }
         public void process(TaskPayload payload) {
             int sleepTime = (payload.id() % 10 == 0) ? 2 : 1;
             TaskEngineTestUtils.sleep(sleepTime);

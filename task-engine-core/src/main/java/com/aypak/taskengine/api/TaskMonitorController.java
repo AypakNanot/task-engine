@@ -1,6 +1,5 @@
 package com.aypak.taskengine.api;
 
-import com.aypak.taskengine.config.TaskEngineProperties;
 import com.aypak.taskengine.core.DynamicConfig;
 import com.aypak.taskengine.core.TaskType;
 import com.aypak.taskengine.executor.SharedPoolManager;
@@ -10,7 +9,6 @@ import com.aypak.taskengine.executor.TaskRegistry;
 import com.aypak.taskengine.monitor.MetricsCollector;
 import com.aypak.taskengine.monitor.PoolStatsResponse;
 import com.aypak.taskengine.monitor.TaskStatsResponse;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -131,16 +129,12 @@ public class TaskMonitorController {
         List<PoolStatsResponse> pools = new ArrayList<>();
         for (TaskType type : TaskType.values()) {
             if (type == TaskType.SCHEDULED) {
-                continue; // SCHEDULED 类型使用调度器，不在此监控
+                continue;
             }
-            try {
-                TaskExecutor executor = sharedPoolManager.getExecutor("temp", type);
-                if (executor != null) {
-                    executor.updatePoolMetrics();
-                    pools.add(buildPoolStatsResponse(type, executor));
-                }
-            } catch (Exception e) {
-                // 跳过未初始化的池
+            TaskExecutor executor = sharedPoolManager.getExecutor("temp", type);
+            if (executor != null) {
+                executor.updatePoolMetrics();
+                pools.add(buildPoolStatsResponse(type, executor));
             }
         }
         return ResponseEntity.ok(pools);
@@ -155,17 +149,20 @@ public class TaskMonitorController {
      */
     @GetMapping("/pool/{taskType}")
     public ResponseEntity<PoolStatsResponse> getPool(@PathVariable String taskType) {
+        TaskType type;
         try {
-            TaskType type = TaskType.valueOf(taskType.toUpperCase());
-            TaskExecutor executor = sharedPoolManager.getExecutor("temp", type);
-            if (executor == null) {
-                return ResponseEntity.notFound().build();
-            }
-            executor.updatePoolMetrics();
-            return ResponseEntity.ok(buildPoolStatsResponse(type, executor));
+            type = TaskType.valueOf(taskType.toUpperCase());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
+
+        TaskExecutor executor = sharedPoolManager.getExecutor("temp", type);
+        if (executor == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        executor.updatePoolMetrics();
+        return ResponseEntity.ok(buildPoolStatsResponse(type, executor));
     }
 
     /**
@@ -183,12 +180,8 @@ public class TaskMonitorController {
         int queueSize = executor.getQueueSize();
         int queueCapacity = executor.getQueueCapacity();
 
-        double queueUtilization = queueCapacity > 0
-            ? (double) queueSize / queueCapacity * 100
-            : 0;
-        double threadUtilization = maxSize > 0
-            ? (double) activeThreads / maxSize * 100
-            : 0;
+        double queueUtilization = calculateUtilization(queueSize, queueCapacity);
+        double threadUtilization = calculateUtilization(activeThreads, maxSize);
 
         return PoolStatsResponse.builder()
             .taskType(type.name())
@@ -199,9 +192,24 @@ public class TaskMonitorController {
             .queueCapacity(queueCapacity)
             .queueUtilization(queueUtilization)
             .threadUtilization(threadUtilization)
-            .completedTaskCount(0) // 共享池不统计单个任务数
+            .completedTaskCount(0)
             .shuttingDown(executor.isTerminated())
             .terminated(executor.isTerminated())
             .build();
+    }
+
+    /**
+     * 计算利用率百分比。
+     * Calculate utilization percentage.
+     *
+     * @param used 已使用量 / used amount
+     * @param capacity 总容量 / total capacity
+     * @return 利用率百分比 / utilization percentage
+     */
+    private double calculateUtilization(int used, int capacity) {
+        if (capacity <= 0) {
+            return 0.0;
+        }
+        return (double) used / capacity * 100;
     }
 }

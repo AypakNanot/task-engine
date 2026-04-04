@@ -1,6 +1,7 @@
 package com.aypak.taskengine.config;
 
 import com.aypak.taskengine.api.TaskMonitorController;
+import com.aypak.taskengine.executor.AdaptiveScaler;
 import com.aypak.taskengine.executor.DynamicScaler;
 import com.aypak.taskengine.executor.TaskEngineImpl;
 import com.aypak.taskengine.monitor.MetricsCollector;
@@ -10,6 +11,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -70,8 +72,8 @@ public class TaskEngineAutoConfiguration {
     }
 
     /**
-     * 创建动态扩展器。
-     * Create dynamic scaler.
+     * 创建动态扩展器（基于阈值）。
+     * Create dynamic scaler (threshold-based).
      *
      * @param taskEngine 任务引擎 / task engine
      * @param properties 任务引擎属性 / task engine properties
@@ -79,10 +81,28 @@ public class TaskEngineAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "task-engine.scaler-type", havingValue = "dynamic", matchIfMissing = true)
     public DynamicScaler dynamicScaler(TaskEngineImpl taskEngine, TaskEngineProperties properties) {
         DynamicScaler scaler = new DynamicScaler(taskEngine, properties);
         // 每 5 秒检查一次扩展 / Check scaling every 5 seconds
         scaler.start(5000);
+        return scaler;
+    }
+
+    /**
+     * 创建自适应扩展器（基于 EWMA 预测）。
+     * Create adaptive scaler (EWMA prediction-based).
+     *
+     * @param taskEngine 任务引擎 / task engine
+     * @param properties 任务引擎属性 / task engine properties
+     * @return 自适应扩展器 / adaptive scaler
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "task-engine.scaler-type", havingValue = "adaptive")
+    public AdaptiveScaler adaptiveScaler(TaskEngineImpl taskEngine, TaskEngineProperties properties) {
+        AdaptiveScaler scaler = new AdaptiveScaler(taskEngine, properties);
+        scaler.start(properties.getAdaptiveScalerInterval());
         return scaler;
     }
 

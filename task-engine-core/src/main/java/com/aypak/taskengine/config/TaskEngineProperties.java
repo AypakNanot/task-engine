@@ -54,6 +54,35 @@ public class TaskEngineProperties {
     private long queueMonitorInterval = 100;
 
     /**
+     * 扩展器类型：dynamic（基于阈值）或 adaptive（基于 EWMA 预测）。
+     * Scaler type: dynamic (threshold-based) or adaptive (EWMA prediction-based).
+     */
+    private ScalerType scalerType = ScalerType.DYNAMIC;
+
+    /**
+     * 自适应扩展器的评估间隔（毫秒），仅 adaptive 类型使用。
+     * Adaptive scaler evaluation interval in milliseconds, only used for adaptive type.
+     */
+    private long adaptiveScalerInterval = 2000;
+
+    /**
+     * 扩展器类型枚举。
+     * Scaler type enum.
+     */
+    public enum ScalerType {
+        /**
+         * 基于阈值的动态扩展器（原有实现）。
+         * Threshold-based dynamic scaler (original implementation).
+         */
+        DYNAMIC,
+        /**
+         * 基于 EWMA 预测的自适应扩展器。
+         * EWMA prediction-based adaptive scaler.
+         */
+        ADAPTIVE
+    }
+
+    /**
      * 特定线程池的配置。
      * Pool-specific configuration.
      */

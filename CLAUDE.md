@@ -158,6 +158,7 @@ try {
 ### Event Handling (Async Buffer Queue)
 
 **Since 2026-04-04**: `ApplicationEventPublisher` replaced with `AsyncEventQueue` for high performance.
+**Old classes removed**: All deprecated Spring event classes have been deleted.
 
 | Event Type | Handler | Performance | Notes |
 |------------|---------|-------------|-------|
@@ -165,16 +166,13 @@ try {
 | Task Failure | `TaskEventDispatcher.publishTaskFailure()` | Direct log | Important alert, never dropped |
 | Task Registered | `TaskEventDispatcher.publishTaskRegistered()` | Direct log | Low frequency, startup only |
 
-**Old classes deprecated** (`@Deprecated(since = "2026-04-04", forRemoval = true)`):
-- `TaskEvent`, `TaskSuccessEvent`, `TaskFailureEvent`, `TaskRegisteredEvent`
-- `TaskEventListener`
-
-**New classes**:
+**Classes**:
 - `AsyncEventQueue<T>` - Bounded queue with configurable capacity and discard threshold
 - `TaskEventDispatcher` - Unified event management
-- `TaskEventRecord`, `TaskSuccessRecord`, `TaskFailureRecord`, `TaskRegisteredRecord` - Lightweight records
+- `TaskEventRecord` - Base record for events
+- `TaskSuccessRecord`, `TaskFailureRecord`, `TaskRegisteredRecord` - Lightweight event records
 
-**Performance**: 50-500x faster than `@Async` (which created new threads). Supports 1,000,000+ QPS.
+**Performance**: 50-500x faster than `@Async`. Supports 1,000,000+ QPS.
 
 ## Configuration
 

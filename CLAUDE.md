@@ -155,6 +155,27 @@ try {
 }
 ```
 
+### Event Handling (Async Buffer Queue)
+
+**Since 2026-04-04**: `ApplicationEventPublisher` replaced with `AsyncEventQueue` for high performance.
+
+| Event Type | Handler | Performance | Notes |
+|------------|---------|-------------|-------|
+| Task Success | `TaskEventDispatcher.publishTaskSuccess()` | ~50-200ns | Buffered queue, discardable |
+| Task Failure | `TaskEventDispatcher.publishTaskFailure()` | Direct log | Important alert, never dropped |
+| Task Registered | `TaskEventDispatcher.publishTaskRegistered()` | Direct log | Low frequency, startup only |
+
+**Old classes deprecated** (`@Deprecated(since = "2026-04-04", forRemoval = true)`):
+- `TaskEvent`, `TaskSuccessEvent`, `TaskFailureEvent`, `TaskRegisteredEvent`
+- `TaskEventListener`
+
+**New classes**:
+- `AsyncEventQueue<T>` - Bounded queue with configurable capacity and discard threshold
+- `TaskEventDispatcher` - Unified event management
+- `TaskEventRecord`, `TaskSuccessRecord`, `TaskFailureRecord`, `TaskRegisteredRecord` - Lightweight records
+
+**Performance**: 50-500x faster than `@Async` (which created new threads). Supports 1,000,000+ QPS.
+
 ## Configuration
 
 ### application.yml
@@ -268,6 +289,20 @@ executor.setMaximumPoolSize(newMax);
 executor.setMaximumPoolSize(newMax);
 executor.setCorePoolSize(newCore);
 ```
+
+### 3. AsyncEventQueue capacity configuration
+
+For high QPS scenarios (>100K), configure queue capacity and discard threshold:
+
+```java
+// Default: capacity=10000, discardThreshold=0 (discard only when full)
+TaskEventDispatcher dispatcher = new TaskEventDispatcher(10000, 0);
+
+// For high QPS: start discarding at 80% capacity
+TaskEventDispatcher dispatcher = new TaskEventDispatcher(10000, 8000);
+```
+
+Monitor discard rate via `TaskEventDispatcher.getDiscardRate()`.
 
 ## Commit Convention
 

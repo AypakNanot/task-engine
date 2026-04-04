@@ -1,5 +1,6 @@
 package com.aypak.taskengine.config;
 
+import com.aypak.taskengine.core.TaskType;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -83,6 +84,33 @@ public class TaskEngineProperties {
     }
 
     /**
+     * 线程池管理模式：
+     * SHARED - 按类型共享线程池（推荐，节省资源）
+     * DEDICATED - 每个任务独立线程池（原有行为，完全隔离）
+     * Pool management mode:
+     * SHARED - Pools shared by task type (recommended, resource-efficient)
+     * DEDICATED - Dedicated pool per task (original behavior, full isolation)
+     */
+    private PoolMode poolMode = PoolMode.SHARED;
+
+    /**
+     * 线程池管理模式枚举。
+     * Pool management mode enum.
+     */
+    public enum PoolMode {
+        /**
+         * 共享模式：每种任务类型一个线程池。
+         * Shared mode: one thread pool per task type.
+         */
+        SHARED,
+        /**
+         * 独占模式：每个任务独立线程池。
+         * Dedicated mode: dedicated pool per task.
+         */
+        DEDICATED
+    }
+
+    /**
      * 特定线程池的配置。
      * Pool-specific configuration.
      */
@@ -101,6 +129,23 @@ public class TaskEngineProperties {
         private PoolSize batch = new PoolSize(2, 4, 10000);
 
         private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
+
+        /**
+         * 根据任务类型获取对应的池配置。
+         * Get pool configuration for task type.
+         *
+         * @param type 任务类型 / task type
+         * @return 池配置 / pool configuration
+         */
+        public PoolSize getPoolSizeForType(TaskType type) {
+            return switch (type) {
+                case CPU_BOUND -> cpuBound;
+                case IO_BOUND -> ioBound;
+                case HYBRID -> hybrid;
+                case SCHEDULED -> scheduled;
+                case BATCH -> batch;
+            };
+        }
     }
 
     /**

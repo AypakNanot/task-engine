@@ -1,0 +1,305 @@
+# ============================================================================
+# Task Engine 完整配置示例 / Task Engine Full Configuration Example
+# ============================================================================
+# 将此文件内容复制到您的 application.yml 中，根据需要修改配置值
+# Copy this content to your application.yml and modify values as needed
+# ============================================================================
+
+task-engine:
+  # ============================================================================
+  # 全局配置 / Global Configuration
+  # ============================================================================
+
+  # 所有线程池的全局最大线程数
+  # 用于限制整个任务引擎的最大线程数量，防止资源耗尽
+  # Global maximum thread limit across all pools
+  # Default: 200
+  global-max-threads: 200
+
+  # 优雅关闭的超时时间（秒）
+  # 关闭时等待任务完成的最大时间，超时后强制终止
+  # Shutdown timeout in seconds for graceful shutdown
+  # Default: 30
+  shutdown-timeout: 30
+
+  # ============================================================================
+  # 动态扩展配置 / Dynamic Scaling Configuration
+  # ============================================================================
+
+  # 每次扩展事件增加/减少的线程数
+  # 触发扩展时，每次增加或减少的线程数量
+  # Number of threads to add/remove per scaling event
+  # Default: 2
+  scale-factor: 2
+
+  # 触发扩展的队列深度百分比阈值（0-100）
+  # 当队列使用率达到此百分比时触发扩容
+  # Queue depth percentage threshold to trigger scale-up (0-100)
+  # Default: 80
+  scale-up-threshold: 80
+
+  # 缩小前的空闲超时（毫秒）
+  # 线程池空闲多长时间后开始缩容
+  # Idle timeout in milliseconds before scale-down
+  # Default: 60000 (1 minute)
+  idle-timeout: 60000
+
+  # ============================================================================
+  # 监控配置 / Monitoring Configuration
+  # ============================================================================
+
+  # QPS 计算窗口大小（毫秒）
+  # 用于计算每秒查询率的滑动窗口大小
+  # QPS calculation window size in milliseconds
+  # Default: 60000 (1 minute)
+  qps-window-size: 60000
+
+  # 队列监控间隔（毫秒）
+  # 检查队列深度的频率
+  # Queue monitoring interval in milliseconds
+  # Default: 100
+  queue-monitor-interval: 100
+
+  # ============================================================================
+  # 扩展器类型配置 / Scaler Type Configuration
+  # ============================================================================
+
+  # 扩展器类型：DYNAMIC（基于阈值）或 ADAPTIVE（基于 EWMA 预测）
+  # - DYNAMIC: 基于队列阈值的简单动态扩展
+  # - ADAPTIVE: 基于 EWMA 流量预测的自适应扩展
+  # Scaler type: DYNAMIC (threshold-based) or ADAPTIVE (EWMA prediction-based)
+  # Default: DYNAMIC
+  scaler-type: DYNAMIC
+
+  # 自适应扩展器的评估间隔（毫秒）
+  # 仅当 scaler-type=ADAPTIVE 时使用
+  # Adaptive scaler evaluation interval in milliseconds
+  # Only used when scaler-type=ADAPTIVE
+  # Default: 2000
+  adaptive-scaler-interval: 2000
+
+  # ============================================================================
+  # 线程池管理模式 / Pool Management Mode
+  # ============================================================================
+
+  # 线程池管理模式：
+  # - SHARED: 按类型共享线程池（推荐，节省资源）
+  #   每种任务类型（CPU_BOUND、IO_BOUND 等）共享一个线程池
+  # - DEDICATED: 每个任务独立线程池（原有行为，完全隔离）
+  #   每个注册的任务都有自己独立的线程池
+  #
+  # Pool management mode:
+  # - SHARED: Pools shared by task type (recommended, resource-efficient)
+  #   One thread pool per task type (CPU_BOUND, IO_BOUND, etc.)
+  # - DEDICATED: Dedicated pool per task (original behavior, full isolation)
+  #   Each registered task has its own dedicated pool
+  # Default: SHARED
+  pool-mode: SHARED
+
+  # ============================================================================
+  # 线程池配置 / Thread Pool Configuration
+  # ============================================================================
+  # 根据任务类型预定义的线程池配置
+  # 在 SHARED 模式下，这些配置决定每种类型的共享池大小
+  # 在 DEDICATED 模式下，这些配置作为默认值参考
+  #
+  # Pre-defined thread pool configuration by task type
+  # In SHARED mode, these determine shared pool size per type
+  # In DEDICATED mode, these serve as default reference
+
+  pools:
+    # ----------------------------------------------------------------------------
+    # CPU 密集型任务池 / CPU-Bound Task Pool
+    # ----------------------------------------------------------------------------
+    # 适用场景：
+    # - 加密/解密计算
+    # - 数据压缩/解压
+    # - 图像处理
+    # - 复杂算法计算
+    #
+    # Use cases:
+    # - Encryption/decryption
+    # - Data compression/decompression
+    # - Image processing
+    # - Complex algorithm computation
+
+    cpu-bound:
+      # 核心线程数：默认等于 CPU 核心数
+      # 长期保持活跃的最小线程数
+      # Core pool size (default = CPU cores)
+      # Minimum threads kept alive
+      core-size: 12  # 示例值，实际根据 CPU 核心数动态计算
+
+      # 最大线程数：CPU 核心数的 2 倍
+      # 高峰期可扩展到的最大线程数
+      # Max pool size (default = CPU cores * 2)
+      # Maximum threads during peak
+      max-size: 24
+
+      # 队列容量：较小值，避免 CPU 过载
+      # 任务队列最大长度，超出后拒绝新任务
+      # Queue capacity (small to avoid CPU overload)
+      # Max task queue length
+      queue-capacity: 100
+
+    # ----------------------------------------------------------------------------
+    # IO 密集型任务池 / IO-Bound Task Pool
+    # ----------------------------------------------------------------------------
+    # 适用场景：
+    # - HTTP 请求调用
+    # - 数据库操作
+    # - 文件读写
+    # - 网络通信
+    #
+    # Use cases:
+    # - HTTP API calls
+    # - Database operations
+    # - File I/O
+    # - Network communication
+
+    io-bound:
+      # 核心线程数：较多线程，应对 IO 等待
+      # IO 操作大部分时间在等待，可多用线程
+      # Core pool size (more threads for IO wait)
+      core-size: 16
+
+      # 最大线程数：支持高并发 IO
+      # 突发流量时的最大线程数
+      # Max pool size for high concurrent IO
+      max-size: 64
+
+      # 队列容量：中等大小
+      # 缓冲突发 IO 请求
+      # Queue capacity (medium)
+      queue-capacity: 1000
+
+    # ----------------------------------------------------------------------------
+    # 混合型任务池 / Hybrid Task Pool
+    # ----------------------------------------------------------------------------
+    # 适用场景：
+    # - 既有计算又有 IO 的任务
+    # - 业务逻辑处理
+    # - 无法明确分类的任务
+    #
+    # Use cases:
+    # - Mixed CPU and IO tasks
+    # - Business logic processing
+    # - Unclassifiable tasks
+
+    hybrid:
+      # 核心线程数：平衡配置
+      # Core pool size (balanced)
+      core-size: 8
+
+      # 最大线程数：适中扩展
+      # Max pool size (moderate)
+      max-size: 16
+
+      # 队列容量：中等大小
+      # Queue capacity (medium)
+      queue-capacity: 500
+
+    # ----------------------------------------------------------------------------
+    # 定时任务池 / Scheduled Task Pool
+    # ----------------------------------------------------------------------------
+    # 适用场景：
+    # - 定时执行的任务
+    # - Cron 表达式调度的任务
+    # - 延迟执行的任务
+    #
+    # Use cases:
+    # - Timed tasks
+    # - Cron scheduled tasks
+    # - Delayed execution tasks
+
+    scheduled:
+      # 核心线程数：少量固定线程
+      # 定时任务通常数量不多
+      # Core pool size (small fixed)
+      core-size: 4
+
+      # 最大线程数：固定不变
+      # Max pool size (fixed)
+      max-size: 4
+
+      # 队列容量：无队列，直接执行
+      # 定时任务不需要队列缓冲
+      # Queue capacity (none, execute directly)
+      queue-capacity: 0
+
+    # ----------------------------------------------------------------------------
+    # 批量处理任务池 / Batch Task Pool
+    # ----------------------------------------------------------------------------
+    # 适用场景：
+    # - 数据同步
+    # - 批量导入/导出
+    # - 离线数据处理
+    # - 后台维护任务
+    #
+    # Use cases:
+    # - Data synchronization
+    # - Bulk import/export
+    # - Offline data processing
+    # - Background maintenance tasks
+
+    batch:
+      # 核心线程数：少量，避免影响在线业务
+      # Core pool size (small, avoid impacting online services)
+      core-size: 2
+
+      # 最大线程数：有限扩展
+      # Max pool size (limited)
+      max-size: 4
+
+      # 队列容量：较大，支持大批量任务积压
+      # 批量任务允许长时间排队
+      # Queue capacity (large, support bulk backlog)
+      queue-capacity: 10000
+
+# ============================================================================
+# 配置说明 / Configuration Notes
+# ============================================================================
+#
+# 1. 线程池选择指南 / Thread Pool Selection Guide:
+#
+#    - CPU 密集型：计算密集型，几乎没有等待
+#      公式：线程数 = CPU 核心数 + 1
+#
+#    - IO 密集型：大量 IO 操作，等待时间长
+#      公式：线程数 = CPU 核心数 * (1 + 等待时间/计算时间)
+#
+#    - 混合型：混合负载，难以明确分类
+#      建议：从较小值开始，根据监控调整
+#
+# 2. 队列容量设置 / Queue Capacity Settings:
+#
+#    - 小队列 (0-100): CPU 密集型，快速失败
+#    - 中队列 (100-1000): IO 密集型，缓冲突发
+#    - 大队列 (1000+): 批量任务，允许积压
+#
+# 3. 扩展策略 / Scaling Strategy:
+#
+#    - DYNAMIC: 简单直接，基于当前队列深度
+#      优点：响应快速，配置简单
+#      缺点：被动响应，可能过度扩展
+#
+#    - ADAPTIVE: 智能预测，基于流量趋势
+#      优点：提前扩展，更平滑
+#      缺点：配置复杂，需要学习期
+#
+# 4. 监控告警 / Monitoring Alerts:
+#
+#    线程池耗尽检测：
+#    - 线程利用率 >= 90%
+#    - 队列利用率 >= 80%
+#    - 连续 3 次检查（15 秒）触发告警
+#    - 告警冷却时间：1 分钟
+#
+# 5. 生产环境建议 / Production Recommendations:
+#
+#    - 使用 SHARED 模式：节省资源，易于管理
+#    - 启用 ADAPTIVE 扩展：提前应对流量高峰
+#    - 配置告警通知：及时发现瓶颈
+#    - 定期监控指标：QPS、响应时间、队列深度
+#
+# ============================================================================

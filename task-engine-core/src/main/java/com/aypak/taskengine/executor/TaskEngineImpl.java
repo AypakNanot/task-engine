@@ -33,6 +33,7 @@ public class TaskEngineImpl implements TaskEngine {
     private final Map<String, CircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
     private final TaskEngineProperties properties;
     private final TaskEventDispatcher eventDispatcher;
+    private final SharedPoolManager sharedPoolManager;
     private DynamicScaler scaler;
 
     public TaskEngineImpl(TaskEngineProperties properties) {
@@ -40,6 +41,7 @@ public class TaskEngineImpl implements TaskEngine {
         this.registry = new TaskRegistry();
         this.poolFactory = new TaskThreadPoolFactory();
         this.eventDispatcher = new TaskEventDispatcher();
+        this.sharedPoolManager = new SharedPoolManager(properties);
     }
 
     public void setScaler(DynamicScaler scaler) {
@@ -73,7 +75,8 @@ public class TaskEngineImpl implements TaskEngine {
         TaskMetrics metrics = new TaskMetrics(taskName, config.getTaskType());
         registry.registerWithMetrics(config, processor, metrics);
 
-        TaskExecutor executor = createExecutor(config, metrics);
+        // 根据池模式选择执行器：共享模式使用类型共享池，独立模式创建专用池
+        TaskExecutor executor = getOrCreateExecutor(config, metrics);
         executors.put(taskName, executor);
 
         // 为每个任务创建熔断器 / Create circuit breaker for each task
@@ -85,8 +88,8 @@ public class TaskEngineImpl implements TaskEngine {
                 : getDefaultMaxSize(config.getTaskType());
         metrics.setPoolSizes(maxPoolSize, maxPoolSize);
 
-        log.info("Task registered: {} [type={}]",
-                taskName, config.getTaskType());
+        log.info("Task registered: {} [type={}, poolMode={}]",
+                taskName, config.getTaskType(), properties.getPoolMode());
 
         // 发布任务注册事件 / Publish task registered event
         publishTaskRegistered(taskName, config);
@@ -125,6 +128,34 @@ public class TaskEngineImpl implements TaskEngine {
         } else {
             ThreadPoolTaskExecutor executor = poolFactory.createExecutor(config);
             return new TaskExecutor(executor, config.getTaskName(), config.getTaskType(), metrics);
+        }
+    }
+
+    /**
+     * 获取或创建任务执行器（根据池模式决定使用共享池或独立池）。
+     * Get or create task executor based on pool mode.
+     *
+     * @param config  任务配置 / task configuration
+     * @param metrics 任务指标 / task metrics
+     * @return 任务执行器 / task executor
+     */
+    private TaskExecutor getOrCreateExecutor(TaskConfig config, TaskMetrics metrics) {
+        TaskType type = config.getTaskType();
+        String taskName = config.getTaskName();
+
+        if (properties.getPoolMode() == TaskEngineProperties.PoolMode.SHARED) {
+            // 共享模式：使用类型共享池
+            if (type == TaskType.SCHEDULED) {
+                ThreadPoolTaskScheduler scheduler = sharedPoolManager.getScheduler(taskName, type);
+                return new TaskExecutor(scheduler, taskName, type, metrics);
+            } else {
+                // 获取共享的原生执行器，为当前任务创建包装器（使用任务自己的 metrics）
+                ThreadPoolTaskExecutor nativeExecutor = sharedPoolManager.getNativeExecutor(type);
+                return new TaskExecutor(nativeExecutor, taskName, type, metrics);
+            }
+        } else {
+            // 独立模式：为每个任务创建独立池（向后兼容）
+            return createExecutor(config, metrics);
         }
     }
 
@@ -365,8 +396,14 @@ public class TaskEngineImpl implements TaskEngine {
             eventDispatcher.stop();
         }
 
-        for (TaskExecutor executor : executors.values()) {
-            executor.shutdown(properties.getShutdownTimeout());
+        // 关闭共享池管理器（如果是共享模式）
+        if (properties.getPoolMode() == TaskEngineProperties.PoolMode.SHARED) {
+            sharedPoolManager.shutdown();
+        } else {
+            // 独立模式：关闭每个任务的独立池
+            for (TaskExecutor executor : executors.values()) {
+                executor.shutdown(properties.getShutdownTimeout());
+            }
         }
 
         executors.clear();

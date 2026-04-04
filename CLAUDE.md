@@ -176,34 +176,84 @@ try {
 
 ## Configuration
 
-### application.yml
+### Full Configuration Template
+
+完整的配置模板位于 `task-engine-core/src/main/resources/application-task-engine.yml`。
+
+复制该文件内容到您的 `application.yml` 并根据需要修改配置值。
+
+### Default Configuration
 
 ```yaml
 task-engine:
-  global-max-threads: 200      # Maximum total threads
+  # Global Settings
+  global-max-threads: 200      # Maximum total threads across all pools
+  shutdown-timeout: 30         # Seconds for graceful shutdown
+
+  # Dynamic Scaling
   scale-factor: 2              # Threads to add/remove per scaling event
   scale-up-threshold: 80       # Queue % to trigger scale-up
   idle-timeout: 60000          # ms before scale-down
-  shutdown-timeout: 30         # seconds for graceful shutdown
+
+  # Monitoring
   qps-window-size: 60000       # ms for QPS calculation window
   queue-monitor-interval: 100  # ms between queue checks
 
+  # Scaler Type: DYNAMIC or ADAPTIVE
+  scaler-type: DYNAMIC
+  adaptive-scaler-interval: 2000  # ms (only for ADAPTIVE)
+
+  # Pool Management: SHARED or DEDICATED
+  pool-mode: SHARED
+
+  # Pre-defined Pool Configurations
   pools:
-    type1-init:
-      core-size: 1
-      max-size: 8
-    type2-cron:
+    cpu-bound:
+      core-size: ${CPU_COUNT}      # Defaults to CPU cores
+      max-size: ${CPU_COUNT * 2}
+      queue-capacity: 100
+    io-bound:
+      core-size: 16
+      max-size: 64
+      queue-capacity: 1000
+    hybrid:
+      core-size: 8
+      max-size: 16
+      queue-capacity: 500
+    scheduled:
       core-size: 4
       max-size: 4
-    type3-high-freq:
-      core-size: 16
-      max-size: 32
-      queue-capacity: 10000
-    type4-background:
+      queue-capacity: 0
+    batch:
       core-size: 2
       max-size: 4
-      queue-capacity: 100
+      queue-capacity: 10000
 ```
+
+### Configuration Reference
+
+| Category | Property | Default | Description |
+|----------|----------|---------|-------------|
+| **Global** | `global-max-threads` | 200 | Max threads across all pools |
+| | `shutdown-timeout` | 30 | Graceful shutdown timeout (seconds) |
+| **Scaling** | `scale-factor` | 2 | Threads per scaling event |
+| | `scale-up-threshold` | 80 | Queue % to trigger scale-up |
+| | `idle-timeout` | 60000 | Idle time before scale-down (ms) |
+| **Monitoring** | `qps-window-size` | 60000 | QPS window size (ms) |
+| | `queue-monitor-interval` | 100 | Queue check interval (ms) |
+| **Scaler** | `scaler-type` | DYNAMIC | DYNAMIC or ADAPTIVE |
+| | `adaptive-scaler-interval` | 2000 | Adaptive eval interval (ms) |
+| **Pool Mode** | `pool-mode` | SHARED | SHARED or DEDICATED |
+
+### Pool Types
+
+| Type | Core | Max | Queue | Use Case |
+|------|------|-----|-------|----------|
+| `cpu-bound` | CPUs | CPUs*2 | 100 | Encryption, compression, image processing |
+| `io-bound` | 16 | 64 | 1000 | HTTP calls, DB ops, file I/O |
+| `hybrid` | 8 | 16 | 500 | Mixed workload, business logic |
+| `scheduled` | 4 | 4 | 0 | Cron jobs, timed tasks |
+| `batch` | 2 | 4 | 10000 | Bulk processing, data sync |
 
 ## REST Endpoints
 
@@ -359,6 +409,59 @@ task-engine:
 ```
 
 See [docs/EWMA-ADAPTIVE-SCALER.md](docs/EWMA-ADAPTIVE-SCALER.md) for details.
+
+### 8. Unified Thread Pool Management
+
+Since 2026-04-04: Shared thread pools by task type to prevent resource waste.
+
+**Pool Mode Configuration**:
+
+```yaml
+task-engine:
+  pool-mode: SHARED  # or 'DEDICATED' (legacy behavior)
+```
+
+**SHARED Mode** (Recommended):
+- One thread pool per task type (CPU_BOUND, IO_BOUND, HYBRID, BATCH, SCHEDULED)
+- All tasks of same type share the pool
+- Prevents resource waste from duplicate pool creation
+- Configurable pool sizes via `task-engine.pools.*`
+
+**DEDICATED Mode** (Legacy):
+- Each task gets its own thread pool
+- Full isolation between tasks
+- Higher resource consumption
+
+**Default Pool Configuration**:
+
+```yaml
+task-engine:
+  pools:
+    cpu-bound:
+      core-size: ${CPU_COUNT}      # Number of CPU cores
+      max-size: ${CPU_COUNT * 2}
+      queue-capacity: 100
+    io-bound:
+      core-size: 16
+      max-size: 64
+      queue-capacity: 1000
+    hybrid:
+      core-size: 8
+      max-size: 16
+      queue-capacity: 500
+    batch:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 10000
+    scheduled:
+      pool-size: 4
+```
+
+**Benefits**:
+- Resource efficiency: No duplicate thread pools
+- Predictable resource usage: Fixed number of pools
+- Easier capacity planning: Clear resource boundaries
+- Backward compatible: Switch to DEDICATED for legacy behavior
 
 ## Commit Convention
 

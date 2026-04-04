@@ -93,8 +93,39 @@ public class TaskEventDispatcher {
     public void publishTaskFailure(String taskName, Throwable error) {
         String errorMessage = error != null ? error.getMessage() : "Unknown error";
         String errorType = error != null ? error.getClass().getSimpleName() : "Unknown";
-        org.slf4j.LoggerFactory.getLogger(EVENT_LOG_NAME).warn("TASK_FAILURE: name={}, type={}, message={}", taskName, errorType, errorMessage);
-        log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), errorMessage);
+        String stackTrace = error != null ? getStackTraceSummary(error) : "N/A";
+
+        // 结构化日志：便于日志系统解析和告警
+        org.slf4j.LoggerFactory.getLogger(EVENT_LOG_NAME).warn(
+            "TASK_FAILURE: name={}, type={}, message={}, stackTrace={}",
+            taskName, errorType, errorMessage, stackTrace);
+
+        log.debug("[{}] Task failed: name={}, type={}, message={}",
+            Thread.currentThread().getName(), taskName, errorType, errorMessage);
+    }
+
+    /**
+     * 获取异常堆栈摘要（前 5 行）。
+     * Get stack trace summary (first 5 lines).
+     *
+     * @param throwable 异常 / exception
+     * @return 堆栈摘要 / stack trace summary
+     */
+    private String getStackTraceSummary(Throwable throwable) {
+        StringBuilder sb = new StringBuilder();
+        StackTraceElement[] stackTrace = throwable.getStackTrace();
+        int limit = Math.min(stackTrace.length, 5);
+
+        for (int i = 0; i < limit; i++) {
+            if (i > 0) sb.append("; ");
+            sb.append(stackTrace[i].toString());
+        }
+
+        if (stackTrace.length > 5) {
+            sb.append("... (").append(stackTrace.length - 5).append(" more)");
+        }
+
+        return sb.toString();
     }
 
     private void handleSuccessEvent(TaskSuccessRecord record) {

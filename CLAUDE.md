@@ -302,6 +302,64 @@ TaskEventDispatcher dispatcher = new TaskEventDispatcher(10000, 8000);
 
 Monitor discard rate via `TaskEventDispatcher.getDiscardRate()`.
 
+### 4. Circuit Breaker for Cascade Failure Prevention
+
+Since 2026-04-04: Built-in circuit breaker prevents cascade failures.
+
+```java
+// Auto-enabled for each task
+CircuitBreaker breaker = taskEngine.getCircuitBreaker("MyTask");
+
+// Check state
+CircuitBreaker.State state = breaker.getState(); // CLOSED, OPEN, or HALF_OPEN
+
+// Manual reset after fixing underlying issue
+taskEngine.resetCircuitBreaker("MyTask");
+```
+
+**Default thresholds**:
+- Failure count: 5
+- Failure rate: 50%
+- Open timeout: 30 seconds
+- Half-open max calls: 3
+
+### 5. Pool Exhaustion Alarm
+
+Since 2026-04-04: Automatic pool exhaustion detection and alerting.
+
+**Triggers when**:
+- Thread utilization >= 90%
+- Queue utilization >= 80%
+- For 3 consecutive checks (15 seconds)
+
+**Alert cooldown**: 1 minute between alerts for same task.
+
+Monitor via logs: `POOL_EXHAUSTION_ALERT: task=...`
+
+### 6. Enhanced Error Logging
+
+Error logs now include:
+- `traceId` - For request tracing
+- `payload` - Payload class name
+- `queueTime` - Time spent in queue
+- `stackTrace` - First 5 lines of stack trace
+
+```log
+TASK_FAILURE: name=MyTask, type=RuntimeException, message=NullPointer, stackTrace=com.example.Service.process(Service.java:42); ...
+```
+
+### 7. EWMA-Based Adaptive Scaling
+
+For proactive thread pool scaling based on traffic prediction:
+
+```yaml
+task-engine:
+  scaler-type: adaptive  # or 'dynamic' (default)
+  adaptive-scaler-interval: 2000  # ms
+```
+
+See [docs/EWMA-ADAPTIVE-SCALER.md](docs/EWMA-ADAPTIVE-SCALER.md) for details.
+
 ## Commit Convention
 
 ```

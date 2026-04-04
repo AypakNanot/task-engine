@@ -69,13 +69,14 @@ public class TaskMetrics {
     }
 
     /**
-     * 更新 EWMA 平均响应时间 - 无锁操作。
-     * Update EWMA for average response time - lock-free.
+     * 更新 EWMA 平均响应时间 - CAS 原子操作。
+     * Update EWMA for average response time - atomic CAS operation.
      */
     private void updateEwma(long newValue) {
-        long current = ewmaResponseTime.get();
-        long updated = (long) (EWMA_ALPHA * newValue + (1 - EWMA_ALPHA) * current);
-        ewmaResponseTime.set(updated);
+        ewmaResponseTime.accumulateAndGet(0, (current, ignored) -> {
+            long updated = (long) (EWMA_ALPHA * newValue + (1 - EWMA_ALPHA) * current);
+            return updated;
+        });
     }
 
     /**

@@ -2,6 +2,7 @@ package com.aypak.taskengine.executor;
 
 import com.aypak.taskengine.config.TaskEngineProperties;
 import com.aypak.taskengine.core.*;
+import com.aypak.taskengine.circuitbreaker.CircuitBreaker;
 import com.aypak.taskengine.event.TaskEventDispatcher;
 import com.aypak.taskengine.monitor.TaskMetrics;
 import jakarta.annotation.PreDestroy;
@@ -29,6 +30,7 @@ public class TaskEngineImpl implements TaskEngine {
     private final TaskRegistry registry;
     private final TaskThreadPoolFactory poolFactory;
     private final Map<String, TaskExecutor> executors = new ConcurrentHashMap<>();
+    private final Map<String, CircuitBreaker> circuitBreakers = new ConcurrentHashMap<>();
     private final TaskEngineProperties properties;
     private final TaskEventDispatcher eventDispatcher;
     private DynamicScaler scaler;
@@ -73,6 +75,10 @@ public class TaskEngineImpl implements TaskEngine {
 
         TaskExecutor executor = createExecutor(config, metrics);
         executors.put(taskName, executor);
+
+        // 为每个任务创建熔断器 / Create circuit breaker for each task
+        CircuitBreaker circuitBreaker = CircuitBreaker.defaultBreaker();
+        circuitBreakers.put(taskName, circuitBreaker);
 
         int maxPoolSize = config.getMaxPoolSize() != null
                 ? config.getMaxPoolSize()
@@ -140,6 +146,12 @@ public class TaskEngineImpl implements TaskEngine {
             throw new IllegalStateException("Executor not found for task: " + taskName);
         }
 
+        // 检查熔断器状态 / Check circuit breaker state
+        CircuitBreaker circuitBreaker = circuitBreakers.get(taskName);
+        if (circuitBreaker != null && !circuitBreaker.allowRequest()) {
+            throw new IllegalStateException("Circuit breaker is OPEN for task: " + taskName);
+        }
+
         TaskMetrics metrics = registry.getMetrics(taskName);
         if (metrics == null) {
             throw new IllegalStateException("Metrics not found for task: " + taskName);
@@ -170,11 +182,28 @@ public class TaskEngineImpl implements TaskEngine {
                 // 发布成功事件 / Publish success event
                 long executionTime = System.currentTimeMillis() - startTime;
                 publishTaskSuccess(taskName, executionTime);
+
+                // 记录到熔断器 / Record to circuit breaker
+                if (circuitBreaker != null) {
+                    circuitBreaker.recordSuccess();
+                }
             } catch (Throwable e) {
                 metrics.recordFailure();
-                // 仅在 debug 级别记录日志以减少开销 / Only log at debug level to reduce overhead
+
+                // 记录到熔断器 / Record to circuit breaker
+                if (circuitBreaker != null) {
+                    circuitBreaker.recordFailure();
+                }
+
+                // 增强错误日志：包含任务上下文信息 / Enhanced error logging with task context
+                String contextTraceId = context != null ? context.getTraceId() : null;
+                String payloadSummary = payload != null ? payload.getClass().getSimpleName() : "null";
+                long queueTime = context != null ? context.getElapsedMs() : 0;
+
                 if (log.isDebugEnabled()) {
-                    log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), e.getMessage());
+                    log.debug("[{}] Task failed: name={}, traceId={}, payload={}, queueTime={}ms, error={}",
+                            Thread.currentThread().getName(), taskName, contextTraceId, payloadSummary,
+                            queueTime, e.getMessage());
                 }
 
                 // 发布失败事件 / Publish failure event
@@ -202,6 +231,31 @@ public class TaskEngineImpl implements TaskEngine {
      */
     private void publishTaskFailure(String taskName, Throwable error) {
         eventDispatcher.publishTaskFailure(taskName, error);
+    }
+
+    /**
+     * 获取任务的熔断器状态。
+     * Get circuit breaker state for a task.
+     *
+     * @param taskName 任务名称 / task name
+     * @return 熔断器状态，如果未找到则返回 null / circuit breaker state, null if not found
+     */
+    public CircuitBreaker getCircuitBreaker(String taskName) {
+        return circuitBreakers.get(taskName);
+    }
+
+    /**
+     * 手动重置任务的熔断器。
+     * Manually reset circuit breaker for a task.
+     *
+     * @param taskName 任务名称 / task name
+     */
+    public void resetCircuitBreaker(String taskName) {
+        CircuitBreaker circuitBreaker = circuitBreakers.get(taskName);
+        if (circuitBreaker != null) {
+            circuitBreaker.reset();
+            log.info("Circuit breaker manually reset for task: {}", taskName);
+        }
     }
 
     @Override

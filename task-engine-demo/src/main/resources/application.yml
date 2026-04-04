@@ -1,0 +1,53 @@
+# Task Engine Demo 配置文件
+
+server:
+  port: 8081
+
+task-engine:
+  # 使用共享池模式
+  pool-mode: SHARED
+
+  # 全局配置
+  global-max-threads: 200
+  shutdown-timeout: 30
+
+  # 动态扩展
+  scale-factor: 2
+  scale-up-threshold: 80
+  idle-timeout: 60000
+
+  # 监控
+  qps-window-size: 60000
+  queue-monitor-interval: 100
+
+  # 扩展器类型：DYNAMIC 或 ADAPTIVE
+  scaler-type: DYNAMIC
+
+  # 线程池配置
+  pools:
+    cpu-bound:
+      core-size: 4
+      max-size: 8
+      queue-capacity: 100
+    io-bound:
+      core-size: 16
+      max-size: 64
+      queue-capacity: 1000
+    hybrid:
+      core-size: 8
+      max-size: 16
+      queue-capacity: 500
+    scheduled:
+      core-size: 4
+      max-size: 4
+      queue-capacity: 0
+    batch:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 10000
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.aypak.taskengine: DEBUG

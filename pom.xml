@@ -41,6 +41,7 @@
         <module>task-engine-core</module>
         <module>flow-engine</module>
         <module>alarm-engine</module>
+        <module>task-engine-demo</module>
     </modules>
 
     <properties>

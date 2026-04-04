@@ -25,13 +25,13 @@ class TaskExecutorTest {
     @DisplayName("Should create TaskExecutor with ThreadPoolTaskExecutor")
     void shouldCreateTaskExecutorWithThreadPoolTaskExecutor() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         assertNotNull(executor);
         assertEquals("TestTask", executor.getTaskName());
-        assertEquals(TaskType.HIGH_FREQ, executor.getTaskType());
+        assertEquals(TaskType.IO_BOUND, executor.getTaskType());
         assertEquals(metrics, executor.getMetrics());
     }
 
@@ -39,8 +39,8 @@ class TaskExecutorTest {
     @DisplayName("Should execute runnable with context")
     void shouldExecuteRunnableWithContext() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean executed = new AtomicBoolean(false);
@@ -61,8 +61,8 @@ class TaskExecutorTest {
     @DisplayName("Should record success metrics after execution")
     void shouldRecordSuccessMetricsAfterExecution() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -88,8 +88,8 @@ class TaskExecutorTest {
     @DisplayName("Should record failure metrics on exception")
     void shouldRecordFailureMetricsOnException() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -111,8 +111,8 @@ class TaskExecutorTest {
     @DisplayName("Should propagate MDC context to task thread")
     void shouldPropagateMdcContextToTaskThread() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicLong capturedTraceId = new AtomicLong();
@@ -134,8 +134,8 @@ class TaskExecutorTest {
     @DisplayName("Should clear MDC after execution")
     void shouldClearMdcAfterExecution() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -154,8 +154,8 @@ class TaskExecutorTest {
     @DisplayName("Should update pool metrics")
     void shouldUpdatePoolMetrics() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 4);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(5);
 
@@ -186,8 +186,8 @@ class TaskExecutorTest {
     @DisplayName("Should get queue size")
     void shouldGetQueueSize() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 1, 2, 10);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         // 初始队列大小应为 0
         assertEquals(0, executor.getQueueSize());
@@ -199,8 +199,8 @@ class TaskExecutorTest {
     @DisplayName("Should get queue capacity")
     void shouldGetQueueCapacity() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 1, 2, 100);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         int capacity = executor.getQueueCapacity();
         assertTrue(capacity > 0);
@@ -212,8 +212,8 @@ class TaskExecutorTest {
     @DisplayName("Should get active threads")
     void shouldGetActiveThreads() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 4);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -238,8 +238,8 @@ class TaskExecutorTest {
     @DisplayName("Should set core pool size")
     void shouldSetCorePoolSize() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 4);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         executor.setCorePoolSize(8);
 
@@ -253,8 +253,8 @@ class TaskExecutorTest {
     @DisplayName("Should set max pool size")
     void shouldSetMaxPoolSize() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 4);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         executor.setMaxPoolSize(8);
 
@@ -269,8 +269,8 @@ class TaskExecutorTest {
     @DisplayName("Should get max pool size")
     void shouldGetMaxPoolSize() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 8);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         assertEquals(8, executor.getMaxPoolSize());
 
@@ -281,8 +281,8 @@ class TaskExecutorTest {
     @DisplayName("Should handle graceful shutdown")
     void shouldHandleGracefulShutdown() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(3);
 
@@ -308,8 +308,8 @@ class TaskExecutorTest {
     @DisplayName("Should check if terminated")
     void shouldCheckIfTerminated() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         assertFalse(executor.isTerminated());
 
@@ -321,8 +321,8 @@ class TaskExecutorTest {
     @DisplayName("Should handle null context gracefully")
     void shouldHandleNullContextGracefully() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -339,8 +339,8 @@ class TaskExecutorTest {
     @DisplayName("Should handle multiple executions")
     void shouldHandleMultipleExecutions() throws Exception {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask");
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         CountDownLatch latch = new CountDownLatch(10);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -365,8 +365,8 @@ class TaskExecutorTest {
     @DisplayName("Should cache queue capacity after first call")
     void shouldCacheQueueCapacityAfterFirstCall() {
         ThreadPoolTaskExecutor springExecutor = createThreadPool("TestTask", 2, 4, 100);
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
-        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.HIGH_FREQ, metrics);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
+        TaskExecutor executor = new TaskExecutor(springExecutor, "TestTask", TaskType.IO_BOUND, metrics);
 
         // 第一次调用应该计算并缓存
         int capacity1 = executor.getQueueCapacity();

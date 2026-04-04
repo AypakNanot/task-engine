@@ -17,12 +17,12 @@ class TaskConfigTest {
     void shouldCreateTaskConfigWithAllRequiredFields() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .build();
 
         assertNotNull(config);
         assertEquals("TestTask", config.getTaskName());
-        assertEquals(TaskType.HIGH_FREQ, config.getTaskType());
+        assertEquals(TaskType.IO_BOUND, config.getTaskType());
     }
 
     @Test
@@ -30,7 +30,7 @@ class TaskConfigTest {
     void shouldValidateSuccessfullyWithAllRequiredFields() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .build();
 
         assertDoesNotThrow(() -> config.validate());
@@ -41,7 +41,7 @@ class TaskConfigTest {
     void shouldThrowExceptionWhenTaskNameIsNull() {
         TaskConfig config = TaskConfig.builder()
                 .taskName(null)
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -56,7 +56,7 @@ class TaskConfigTest {
     void shouldThrowExceptionWhenTaskNameIsBlank() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("   ")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
@@ -86,7 +86,7 @@ class TaskConfigTest {
     void shouldThrowExceptionWhenQueueAlertThresholdIsNegative() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .queueAlertThreshold(-1)
                 .build();
 
@@ -102,7 +102,7 @@ class TaskConfigTest {
     void shouldThrowExceptionWhenQueueAlertThresholdIsOver100() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .queueAlertThreshold(101)
                 .build();
 
@@ -118,7 +118,7 @@ class TaskConfigTest {
     void shouldAcceptQueueAlertThresholdOf0() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .queueAlertThreshold(0)
                 .build();
 
@@ -130,7 +130,7 @@ class TaskConfigTest {
     void shouldAcceptQueueAlertThresholdOf100() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("TestTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .queueAlertThreshold(100)
                 .build();
 
@@ -138,26 +138,26 @@ class TaskConfigTest {
     }
 
     @Test
-    @DisplayName("Should throw exception when CRON task has no schedule config")
-    void shouldThrowExceptionWhenCronTaskHasNoScheduleConfig() {
+    @DisplayName("Should throw exception when SCHEDULED task has no schedule config")
+    void shouldThrowExceptionWhenScheduledTaskHasNoScheduleConfig() {
         TaskConfig config = TaskConfig.builder()
-                .taskName("CronTask")
-                .taskType(TaskType.CRON)
+                .taskName("ScheduledTask")
+                .taskType(TaskType.SCHEDULED)
                 .build();
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> config.validate()
         );
-        assertTrue(exception.getMessage().contains("CRON"));
+        assertTrue(exception.getMessage().contains("SCHEDULED"));
     }
 
     @Test
-    @DisplayName("Should validate CRON task with cronExpression")
-    void shouldValidateCronTaskWithCronExpression() {
+    @DisplayName("Should validate SCHEDULED task with cronExpression")
+    void shouldValidateScheduledTaskWithCronExpression() {
         TaskConfig config = TaskConfig.builder()
-                .taskName("CronTask")
-                .taskType(TaskType.CRON)
+                .taskName("ScheduledTask")
+                .taskType(TaskType.SCHEDULED)
                 .cronExpression("0 0 12 * * ?")
                 .build();
 
@@ -165,11 +165,11 @@ class TaskConfigTest {
     }
 
     @Test
-    @DisplayName("Should validate CRON task with fixedRate")
-    void shouldValidateCronTaskWithFixedRate() {
+    @DisplayName("Should validate SCHEDULED task with fixedRate")
+    void shouldValidateScheduledTaskWithFixedRate() {
         TaskConfig config = TaskConfig.builder()
-                .taskName("CronTask")
-                .taskType(TaskType.CRON)
+                .taskName("ScheduledTask")
+                .taskType(TaskType.SCHEDULED)
                 .fixedRate(5000L)
                 .build();
 
@@ -177,11 +177,11 @@ class TaskConfigTest {
     }
 
     @Test
-    @DisplayName("Should validate CRON task with fixedDelay")
-    void shouldValidateCronTaskWithFixedDelay() {
+    @DisplayName("Should validate SCHEDULED task with fixedDelay")
+    void shouldValidateScheduledTaskWithFixedDelay() {
         TaskConfig config = TaskConfig.builder()
-                .taskName("CronTask")
-                .taskType(TaskType.CRON)
+                .taskName("ScheduledTask")
+                .taskType(TaskType.SCHEDULED)
                 .fixedDelay(5000L)
                 .build();
 
@@ -189,26 +189,26 @@ class TaskConfigTest {
     }
 
     @Test
-    @DisplayName("Should validate non-CRON tasks without schedule config")
-    void shouldValidateNonCronTasksWithoutScheduleConfig() {
-        TaskConfig initConfig = TaskConfig.builder()
-                .taskName("InitTask")
-                .taskType(TaskType.INIT)
+    @DisplayName("Should validate non-SCHEDULED tasks without schedule config")
+    void shouldValidateNonScheduledTasksWithoutScheduleConfig() {
+        TaskConfig cpuConfig = TaskConfig.builder()
+                .taskName("CpuTask")
+                .taskType(TaskType.CPU_BOUND)
                 .build();
 
-        TaskConfig highFreqConfig = TaskConfig.builder()
-                .taskName("HighFreqTask")
-                .taskType(TaskType.HIGH_FREQ)
+        TaskConfig ioConfig = TaskConfig.builder()
+                .taskName("IoTask")
+                .taskType(TaskType.IO_BOUND)
                 .build();
 
-        TaskConfig backgroundConfig = TaskConfig.builder()
-                .taskName("BackgroundTask")
-                .taskType(TaskType.BACKGROUND)
+        TaskConfig batchConfig = TaskConfig.builder()
+                .taskName("BatchTask")
+                .taskType(TaskType.BATCH)
                 .build();
 
-        assertDoesNotThrow(() -> initConfig.validate());
-        assertDoesNotThrow(() -> highFreqConfig.validate());
-        assertDoesNotThrow(() -> backgroundConfig.validate());
+        assertDoesNotThrow(() -> cpuConfig.validate());
+        assertDoesNotThrow(() -> ioConfig.validate());
+        assertDoesNotThrow(() -> batchConfig.validate());
     }
 
     @Test
@@ -216,7 +216,7 @@ class TaskConfigTest {
     void shouldCreateConfigWithAllOptionalFields() {
         TaskConfig config = TaskConfig.builder()
                 .taskName("FullConfigTask")
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .corePoolSize(8)
                 .maxPoolSize(16)
                 .queueCapacity(10000)
@@ -228,7 +228,7 @@ class TaskConfigTest {
                 .build();
 
         assertEquals("FullConfigTask", config.getTaskName());
-        assertEquals(TaskType.HIGH_FREQ, config.getTaskType());
+        assertEquals(TaskType.IO_BOUND, config.getTaskType());
         assertEquals(8, config.getCorePoolSize());
         assertEquals(16, config.getMaxPoolSize());
         assertEquals(10000, config.getQueueCapacity());
@@ -242,9 +242,10 @@ class TaskConfigTest {
     @Test
     @DisplayName("Should get correct prefix from TaskType")
     void shouldGetCorrectPrefixFromTaskType() {
-        assertEquals("INIT", TaskType.INIT.getPrefix());
-        assertEquals("CRON", TaskType.CRON.getPrefix());
-        assertEquals("HIGH_FREQ", TaskType.HIGH_FREQ.getPrefix());
-        assertEquals("BACKGROUND", TaskType.BACKGROUND.getPrefix());
+        assertEquals("CPU", TaskType.CPU_BOUND.getPrefix());
+        assertEquals("IO", TaskType.IO_BOUND.getPrefix());
+        assertEquals("HYBRID", TaskType.HYBRID.getPrefix());
+        assertEquals("CRON", TaskType.SCHEDULED.getPrefix());
+        assertEquals("BATCH", TaskType.BATCH.getPrefix());
     }
 }

@@ -45,7 +45,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should register task processor")
     void shouldRegisterTaskProcessor() {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         TestProcessor<String> processor = new TestProcessor<>();
 
         assertDoesNotThrow(() -> engine.register(config, processor));
@@ -57,7 +57,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should throw exception when registering duplicate task")
     void shouldThrowExceptionWhenRegisteringDuplicateTask() {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         TestProcessor<String> processor = new TestProcessor<>();
 
         engine.register(config, processor);
@@ -72,7 +72,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should execute registered task")
     void shouldExecuteRegisteredTask() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean executed = new AtomicBoolean(false);
 
@@ -103,8 +103,8 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should get stats for all tasks")
     void shouldGetStatsForAllTasks() {
-        TaskConfig config1 = createConfig("Task1", TaskType.HIGH_FREQ);
-        TaskConfig config2 = createConfig("Task2", TaskType.BACKGROUND);
+        TaskConfig config1 = createConfig("Task1", TaskType.IO_BOUND);
+        TaskConfig config2 = createConfig("Task2", TaskType.BATCH);
 
         engine.register(config1, new TestProcessor<>());
         engine.register(config2, new TestProcessor<>());
@@ -119,7 +119,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should get stats for specific task")
     void shouldGetStatsForSpecificTask() {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         engine.register(config, new TestProcessor<>());
 
         TaskMetrics metrics = engine.getStats("TestTask");
@@ -138,7 +138,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should update task config")
     void shouldUpdateTaskConfig() {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         engine.register(config, new TestProcessor<>());
 
         DynamicConfig dynamicConfig = DynamicConfig.builder()
@@ -167,7 +167,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should reset metrics for specific task")
     void shouldResetMetricsForSpecificTask() {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         engine.register(config, new TestProcessor<>());
 
         // 先执行一些任务来产生指标
@@ -194,8 +194,8 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should reset all metrics")
     void shouldResetAllMetrics() {
-        TaskConfig config1 = createConfig("Task1", TaskType.HIGH_FREQ);
-        TaskConfig config2 = createConfig("Task2", TaskType.BACKGROUND);
+        TaskConfig config1 = createConfig("Task1", TaskType.IO_BOUND);
+        TaskConfig config2 = createConfig("Task2", TaskType.BATCH);
 
         engine.register(config1, new TestProcessor<>());
         engine.register(config2, new TestProcessor<>());
@@ -214,9 +214,9 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should get all registrations")
     void shouldGetAllRegistrations() {
-        TaskConfig config1 = createConfig("Task1", TaskType.HIGH_FREQ);
+        TaskConfig config1 = createConfig("Task1", TaskType.IO_BOUND);
         TaskConfig config2 = createCronConfig("Task2");
-        TaskConfig config3 = createConfig("Task3", TaskType.INIT);
+        TaskConfig config3 = createConfig("Task3", TaskType.CPU_BOUND);
 
         engine.register(config1, new TestProcessor<>());
         engine.register(config2, new TestProcessor<>());
@@ -230,7 +230,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should handle task success callback")
     void shouldHandleTaskSuccessCallback() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean onSuccessCalled = new AtomicBoolean(false);
 
@@ -253,7 +253,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should handle task failure callback")
     void shouldHandleTaskFailureCallback() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean onFailureCalled = new AtomicBoolean(false);
 
@@ -277,7 +277,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should record failure metrics on task exception")
     void shouldRecordFailureMetricsOnTaskException() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(1);
 
         TestProcessor<String> processor = new TestProcessor<>(payload -> {
@@ -308,7 +308,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should handle graceful shutdown")
     void shouldHandleGracefulShutdown() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(3);
 
         TestProcessor<String> processor = new TestProcessor<>(payload -> {
@@ -335,10 +335,10 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should handle multiple task types")
     void shouldHandleMultipleTaskTypes() {
-        engine.register(createConfig("InitTask", TaskType.INIT), new TestProcessor<>());
+        engine.register(createConfig("InitTask", TaskType.CPU_BOUND), new TestProcessor<>());
         engine.register(createCronConfig("CronTask"), new TestProcessor<>());
-        engine.register(createConfig("HighFreqTask", TaskType.HIGH_FREQ), new TestProcessor<>());
-        engine.register(createConfig("BackgroundTask", TaskType.BACKGROUND), new TestProcessor<>());
+        engine.register(createConfig("HighFreqTask", TaskType.IO_BOUND), new TestProcessor<>());
+        engine.register(createConfig("BackgroundTask", TaskType.BATCH), new TestProcessor<>());
 
         assertEquals(4, engine.getExecutors().size());
         assertTrue(engine.getRegistry().isRegistered("InitTask"));
@@ -350,7 +350,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should track execution count correctly")
     void shouldTrackExecutionCountCorrectly() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(10);
 
         TestProcessor<String> processor = new TestProcessor<>(payload -> latch.countDown());
@@ -373,7 +373,7 @@ class TaskEngineImplTest {
     @Test
     @DisplayName("Should handle context propagation")
     void shouldHandleContextPropagation() throws Exception {
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         CountDownLatch latch = new CountDownLatch(1);
         AtomicLong capturedTime = new AtomicLong(0);
 
@@ -403,7 +403,7 @@ class TaskEngineImplTest {
     private TaskConfig createCronConfig(String taskName) {
         return TaskConfig.builder()
                 .taskName(taskName)
-                .taskType(TaskType.CRON)
+                .taskType(TaskType.SCHEDULED)
                 .cronExpression("0 0 12 * * ?")
                 .build();
     }
@@ -439,7 +439,7 @@ class TaskEngineImplTest {
 
         @Override
         public TaskType getTaskType() {
-            return TaskType.HIGH_FREQ;
+            return TaskType.IO_BOUND;
         }
 
         @Override

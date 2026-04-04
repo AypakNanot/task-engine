@@ -43,7 +43,7 @@ class TaskEngineStressTest {
     void setup() {
         TaskEngineTestUtils.registerTaskSafely(taskEngine, TaskConfig.builder()
                 .taskName(TASK_NAME)
-                .taskType(TaskType.HIGH_FREQ)
+                .taskType(TaskType.IO_BOUND)
                 .corePoolSize(16)
                 .maxPoolSize(32)
                 .queueCapacity(10000)
@@ -167,7 +167,7 @@ class TaskEngineStressTest {
         public String getTaskName() { return TASK_NAME; }
 
         @Override
-        public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
+        public TaskType getTaskType() { return TaskType.IO_BOUND; }
 
         @Override
         public void process(StressPayload payload) {

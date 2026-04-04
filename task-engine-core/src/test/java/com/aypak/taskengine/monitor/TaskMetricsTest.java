@@ -16,10 +16,10 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should create metrics with task name and type")
     void shouldCreateMetricsWithTaskNameAndType() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         assertEquals("TestTask", metrics.getTaskName());
-        assertEquals(TaskType.HIGH_FREQ, metrics.getTaskType());
+        assertEquals(TaskType.IO_BOUND, metrics.getTaskType());
         assertEquals(0, metrics.getSuccessCount().sum());
         assertEquals(0, metrics.getFailureCount().sum());
     }
@@ -27,7 +27,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should record success and update counters")
     void shouldRecordSuccessAndUpdateCounters() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.recordSuccess(100);
 
@@ -39,7 +39,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should record failure and update counters")
     void shouldRecordFailureAndUpdateCounters() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.recordFailure();
 
@@ -51,7 +51,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should record multiple successes correctly")
     void shouldRecordMultipleSuccessesCorrectly() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.recordSuccess(50);
         metrics.recordSuccess(100);
@@ -65,7 +65,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should record mixed successes and failures")
     void shouldRecordMixedSuccessesAndFailures() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.recordSuccess(50);
         metrics.recordFailure();
@@ -81,7 +81,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should update EWMA response time correctly")
     void shouldUpdateEwmaResponseTimeCorrectly() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         // 第一次记录，EWMA = 0.3 * 100 + 0.7 * 0 = 30
         metrics.recordSuccess(100);
@@ -102,7 +102,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should calculate QPS correctly for new window")
     void shouldCalculateQpsCorrectlyForNewWindow() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         // 记录一些执行
         metrics.recordSuccess(50);
@@ -126,7 +126,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should return zero QPS for empty window")
     void shouldReturnZeroQpsForEmptyWindow() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         double qps = metrics.calculateQps(60000);
 
@@ -136,7 +136,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should get QPS from getter")
     void shouldGetQpsFromGetter() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         double qps = metrics.getQps();
 
@@ -146,7 +146,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should update and get queue depth")
     void shouldUpdateAndGetQueueDepth() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.setQueueDepth(50);
         assertEquals(50, metrics.getQueueDepth().get());
@@ -158,7 +158,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should update and get active threads")
     void shouldUpdateAndGetActiveThreads() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.setActiveThreads(5);
         assertEquals(5, metrics.getActiveThreads().get());
@@ -170,7 +170,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should track peak threads correctly")
     void shouldTrackPeakThreadsCorrectly() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.setActiveThreads(5);
         metrics.setActiveThreads(3); // 低于峰值，不应更新峰值
@@ -186,7 +186,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should set pool sizes correctly")
     void shouldSetPoolSizesCorrectly() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.setPoolSizes(8, 16);
 
@@ -197,7 +197,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should update current max pool size")
     void shouldUpdateCurrentMaxPoolSize() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.setPoolSizes(8, 8);
         metrics.updateCurrentMaxPoolSize(16);
@@ -209,7 +209,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should reset all metrics")
     void shouldResetAllMetrics() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         // 设置一些数据
         metrics.recordSuccess(100);
@@ -233,7 +233,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should calculate total count correctly")
     void shouldCalculateTotalCountCorrectly() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         assertEquals(0, metrics.getTotalCount());
 
@@ -250,7 +250,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should handle high throughput recording")
     void shouldHandleHighThroughputRecording() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         // 高吞吐量测试
         for (int i = 0; i < 10000; i++) {
@@ -266,7 +266,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should handle concurrent recording")
     void shouldHandleConcurrentRecording() throws InterruptedException {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         Thread[] threads = new Thread[10];
         for (int i = 0; i < 10; i++) {
@@ -291,7 +291,7 @@ class TaskMetricsTest {
     @Test
     @DisplayName("Should record success with different execution times")
     void shouldRecordSuccessWithDifferentExecutionTimes() {
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         metrics.recordSuccess(10);   // 快速
         metrics.recordSuccess(100);  // 中等

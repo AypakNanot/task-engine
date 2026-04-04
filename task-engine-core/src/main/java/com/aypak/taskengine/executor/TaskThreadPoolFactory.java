@@ -45,14 +45,14 @@ public class TaskThreadPoolFactory {
         RejectionPolicy policy = config.getRejectionPolicy();
         executor.setRejectedExecutionHandler(createRejectionHandler(policy, config.getTaskName()));
 
-        boolean daemon = config.getTaskType() == TaskType.INIT;
+        boolean daemon = config.getTaskType() == TaskType.CPU_BOUND;
         executor.setThreadFactory(new NamedThreadFactory(
                 config.getTaskType().getPrefix(),
                 config.getTaskName(),
                 daemon
         ));
 
-        executor.setAllowCoreThreadTimeOut(config.getTaskType() == TaskType.HIGH_FREQ);
+        executor.setAllowCoreThreadTimeOut(config.getTaskType() == TaskType.IO_BOUND || config.getTaskType() == TaskType.HYBRID);
         executor.initialize();
         return executor;
     }
@@ -69,15 +69,15 @@ public class TaskThreadPoolFactory {
 
         int poolSize = config.getCorePoolSize() != null
                 ? config.getCorePoolSize()
-                : getDefaultCoreSize(TaskType.CRON);
+                : getDefaultCoreSize(TaskType.SCHEDULED);
 
         scheduler.setPoolSize(poolSize);
-        scheduler.setThreadNamePrefix(TaskType.CRON.getPrefix() + "-" + config.getTaskName() + "-");
+        scheduler.setThreadNamePrefix(TaskType.SCHEDULED.getPrefix() + "-" + config.getTaskName() + "-");
 
         RejectionPolicy policy = config.getRejectionPolicy();
         scheduler.setRejectedExecutionHandler(createRejectionHandler(policy, config.getTaskName()));
         scheduler.setThreadFactory(new NamedThreadFactory(
-                TaskType.CRON.getPrefix(),
+                TaskType.SCHEDULED.getPrefix(),
                 config.getTaskName(),
                 false
         ));
@@ -118,10 +118,11 @@ public class TaskThreadPoolFactory {
      */
     private int getDefaultCoreSize(TaskType type) {
         return switch (type) {
-            case INIT -> 1;
-            case CRON -> 4;
-            case HIGH_FREQ -> CPU_COUNT * 2;
-            case BACKGROUND -> 2;
+            case CPU_BOUND -> CPU_COUNT;
+            case IO_BOUND -> 16;
+            case HYBRID -> 8;
+            case SCHEDULED -> 4;
+            case BATCH -> 2;
         };
     }
 
@@ -131,10 +132,11 @@ public class TaskThreadPoolFactory {
      */
     private int getDefaultMaxSize(TaskType type) {
         return switch (type) {
-            case INIT -> CPU_COUNT;
-            case CRON -> 4;
-            case HIGH_FREQ -> CPU_COUNT * 4;
-            case BACKGROUND -> 4;
+            case CPU_BOUND -> CPU_COUNT * 2;
+            case IO_BOUND -> 64;
+            case HYBRID -> 16;
+            case SCHEDULED -> 4;
+            case BATCH -> 4;
         };
     }
 
@@ -144,10 +146,11 @@ public class TaskThreadPoolFactory {
      */
     private int getDefaultQueueCapacity(TaskType type) {
         return switch (type) {
-            case INIT -> 0;
-            case CRON -> 0;
-            case HIGH_FREQ -> 10000;
-            case BACKGROUND -> 100;
+            case CPU_BOUND -> 100;
+            case IO_BOUND -> 1000;
+            case HYBRID -> 500;
+            case SCHEDULED -> 0;
+            case BATCH -> 10000;
         };
     }
 

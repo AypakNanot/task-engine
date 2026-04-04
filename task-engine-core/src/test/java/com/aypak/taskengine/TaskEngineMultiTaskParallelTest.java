@@ -41,16 +41,16 @@ class TaskEngineMultiTaskParallelTest {
     @BeforeEach
     void setup() {
         // Register multiple task types to test isolation
-        registerTask(TaskEngineTestUtils.TASK_HIGH_FREQ, TaskType.HIGH_FREQ,
+        registerTask(TaskEngineTestUtils.TASK_HIGH_FREQ, TaskType.IO_BOUND,
                 cpuCount * 4, cpuCount * 8, 5000, 80, RejectionPolicy.CALLER_RUNS);
 
-        registerTask(TaskEngineTestUtils.TASK_BACKGROUND, TaskType.BACKGROUND,
+        registerTask(TaskEngineTestUtils.TASK_BACKGROUND, TaskType.BATCH,
                 4, 8, 100, 90, RejectionPolicy.DISCARD_OLDEST);
 
-        registerTask(TaskEngineTestUtils.TASK_INIT, TaskType.INIT,
+        registerTask(TaskEngineTestUtils.TASK_INIT, TaskType.CPU_BOUND,
                 2, 4, 10, 80, RejectionPolicy.ABORT_WITH_ALERT);
 
-        registerTask(TaskEngineTestUtils.TASK_CRON, TaskType.CRON,
+        registerTask(TaskEngineTestUtils.TASK_CRON, TaskType.SCHEDULED,
                 cpuCount, cpuCount * 2, 1000, 80, RejectionPolicy.CALLER_RUNS);
     }
 

@@ -65,10 +65,13 @@ public class TaskEngineProperties {
      */
     @Data
     public static class PoolConfig {
-        private PoolSize type1Init = new PoolSize(1, 8);
-        private PoolSize type2Cron = new PoolSize(4, 4);
-        private PoolSize type3HighFreq = new PoolSize(16, 32, 10000);
-        private PoolSize type4Background = new PoolSize(2, 4, 100);
+        private PoolSize cpuBound = new PoolSize(CPU_COUNT, CPU_COUNT * 2, 100);
+        private PoolSize ioBound = new PoolSize(16, 64, 1000);
+        private PoolSize hybrid = new PoolSize(8, 16, 500);
+        private PoolSize scheduled = new PoolSize(4, 4, 0);
+        private PoolSize batch = new PoolSize(2, 4, 10000);
+
+        private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
     }
 
     /**

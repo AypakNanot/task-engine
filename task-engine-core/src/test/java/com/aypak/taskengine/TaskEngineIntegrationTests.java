@@ -31,7 +31,7 @@ class TaskEngineIntegrationTests {
         if (!taskEngine.getStats().containsKey("HighFreqAlert")) {
             taskEngine.register(TaskConfig.builder()
                     .taskName("HighFreqAlert")
-                    .taskType(TaskType.HIGH_FREQ)
+                    .taskType(TaskType.IO_BOUND)
                     .queueCapacity(1000)
                     .rejectionPolicy(RejectionPolicy.CALLER_RUNS)
                     .build(), new AlertProcessor());
@@ -40,7 +40,7 @@ class TaskEngineIntegrationTests {
         if (!taskEngine.getStats().containsKey("BackgroundCleanup")) {
             taskEngine.register(TaskConfig.builder()
                     .taskName("BackgroundCleanup")
-                    .taskType(TaskType.BACKGROUND)
+                    .taskType(TaskType.BATCH)
                     .queueCapacity(100)
                     .rejectionPolicy(RejectionPolicy.DISCARD_OLDEST)
                     .build(), new CleanupProcessor());
@@ -49,7 +49,7 @@ class TaskEngineIntegrationTests {
         if (!taskEngine.getStats().containsKey("InitTask")) {
             taskEngine.register(TaskConfig.builder()
                     .taskName("InitTask")
-                    .taskType(TaskType.INIT)
+                    .taskType(TaskType.CPU_BOUND)
                     .build(), new InitProcessor());
         }
     }
@@ -128,7 +128,7 @@ class TaskEngineIntegrationTests {
         public String getTaskName() { return "HighFreqAlert"; }
 
         @Override
-        public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
+        public TaskType getTaskType() { return TaskType.IO_BOUND; }
 
         @Override
         public void process(String context) {
@@ -142,7 +142,7 @@ class TaskEngineIntegrationTests {
         public String getTaskName() { return "BackgroundCleanup"; }
 
         @Override
-        public TaskType getTaskType() { return TaskType.BACKGROUND; }
+        public TaskType getTaskType() { return TaskType.BATCH; }
 
         @Override
         public void process(String context) {
@@ -155,7 +155,7 @@ class TaskEngineIntegrationTests {
         public String getTaskName() { return "InitTask"; }
 
         @Override
-        public TaskType getTaskType() { return TaskType.INIT; }
+        public TaskType getTaskType() { return TaskType.CPU_BOUND; }
 
         @Override
         public void process(String context) {

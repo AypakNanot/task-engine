@@ -104,8 +104,8 @@ public class TaskConfig {
         if (queueAlertThreshold != null && (queueAlertThreshold < 0 || queueAlertThreshold > 100)) {
             throw new IllegalArgumentException("queueAlertThreshold must be between 0 and 100");
         }
-        if (taskType == TaskType.CRON && cronExpression == null && fixedRate == null && fixedDelay == null) {
-            throw new IllegalArgumentException("CRON tasks require cronExpression, fixedRate, or fixedDelay");
+        if (taskType == TaskType.SCHEDULED && cronExpression == null && fixedRate == null && fixedDelay == null) {
+            throw new IllegalArgumentException("SCHEDULED tasks require cronExpression, fixedRate, or fixedDelay");
         }
     }
 }

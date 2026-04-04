@@ -112,10 +112,11 @@ public class TaskEngineImpl implements TaskEngine, ApplicationEventPublisherAwar
     private int getDefaultMaxSize(TaskType type) {
         int cpuCount = Runtime.getRuntime().availableProcessors();
         return switch (type) {
-            case INIT -> cpuCount;
-            case CRON -> 4;
-            case HIGH_FREQ -> cpuCount * 4;
-            case BACKGROUND -> 4;
+            case CPU_BOUND -> cpuCount * 2;
+            case IO_BOUND -> 64;
+            case HYBRID -> 16;
+            case SCHEDULED -> 4;
+            case BATCH -> 4;
         };
     }
 
@@ -128,7 +129,7 @@ public class TaskEngineImpl implements TaskEngine, ApplicationEventPublisherAwar
      * @return 任务执行器 / task executor
      */
     private TaskExecutor createExecutor(TaskConfig config, TaskMetrics metrics) {
-        if (config.getTaskType() == TaskType.CRON) {
+        if (config.getTaskType() == TaskType.SCHEDULED) {
             ThreadPoolTaskScheduler scheduler = poolFactory.createScheduler(config);
             return new TaskExecutor(scheduler, config.getTaskName(), config.getTaskType(), metrics);
         } else {

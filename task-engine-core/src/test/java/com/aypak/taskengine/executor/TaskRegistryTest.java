@@ -24,9 +24,9 @@ class TaskRegistryTest {
     void shouldRegisterTaskWithMetrics() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         registry.registerWithMetrics(config, processor, metrics);
 
@@ -40,7 +40,7 @@ class TaskRegistryTest {
     void shouldRegisterTaskWithoutMetricsCreatesNew() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
 
         registry.register(config, processor);
@@ -55,7 +55,7 @@ class TaskRegistryTest {
     void shouldThrowExceptionWhenRegisteringDuplicateTask() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
 
         registry.register(config, processor);
@@ -73,7 +73,7 @@ class TaskRegistryTest {
     void shouldGetRegistrationByName() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
 
         registry.register(config, processor);
@@ -82,7 +82,7 @@ class TaskRegistryTest {
 
         assertNotNull(registration);
         assertEquals("TestTask", registration.getConfig().getTaskName());
-        assertEquals(TaskType.HIGH_FREQ, registration.getConfig().getTaskType());
+        assertEquals(TaskType.IO_BOUND, registration.getConfig().getTaskType());
         assertSame(processor, registration.getProcessor());
     }
 
@@ -103,9 +103,9 @@ class TaskRegistryTest {
     void shouldGetMetricsByName() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
-        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.HIGH_FREQ);
+        TaskMetrics metrics = new TaskMetrics("TestTask", TaskType.IO_BOUND);
 
         registry.registerWithMetrics(config, processor, metrics);
 
@@ -123,7 +123,7 @@ class TaskRegistryTest {
 
         // 注册多个任务
         for (int i = 0; i < 5; i++) {
-            TaskConfig config = createConfig("Task" + i, TaskType.HIGH_FREQ);
+            TaskConfig config = createConfig("Task" + i, TaskType.IO_BOUND);
             ITaskProcessor<String> processor = createProcessor();
             registry.register(config, processor);
         }
@@ -140,7 +140,7 @@ class TaskRegistryTest {
 
         // 注册多个任务
         for (int i = 0; i < 5; i++) {
-            TaskConfig config = createConfig("Task" + i, TaskType.HIGH_FREQ);
+            TaskConfig config = createConfig("Task" + i, TaskType.IO_BOUND);
             ITaskProcessor<String> processor = createProcessor();
             registry.register(config, processor);
         }
@@ -170,7 +170,7 @@ class TaskRegistryTest {
     void shouldDeregisterTask() {
         TaskRegistry registry = new TaskRegistry();
 
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
         ITaskProcessor<String> processor = createProcessor();
 
         registry.register(config, processor);
@@ -199,10 +199,10 @@ class TaskRegistryTest {
 
         assertEquals(0, registry.getTaskCount());
 
-        registry.register(createConfig("Task1", TaskType.HIGH_FREQ), createProcessor());
+        registry.register(createConfig("Task1", TaskType.IO_BOUND), createProcessor());
         assertEquals(1, registry.getTaskCount());
 
-        registry.register(createConfig("Task2", TaskType.BACKGROUND), createProcessor());
+        registry.register(createConfig("Task2", TaskType.BATCH), createProcessor());
         assertEquals(2, registry.getTaskCount());
 
         registry.deregister("Task1");
@@ -214,10 +214,10 @@ class TaskRegistryTest {
     void shouldRegisterTasksWithDifferentTypes() {
         TaskRegistry registry = new TaskRegistry();
 
-        registry.register(createConfig("InitTask", TaskType.INIT), createProcessor());
-        registry.register(createConfig("CronTask", TaskType.CRON), createProcessor());
-        registry.register(createConfig("HighFreqTask", TaskType.HIGH_FREQ), createProcessor());
-        registry.register(createConfig("BackgroundTask", TaskType.BACKGROUND), createProcessor());
+        registry.register(createConfig("InitTask", TaskType.CPU_BOUND), createProcessor());
+        registry.register(createConfig("CronTask", TaskType.SCHEDULED), createProcessor());
+        registry.register(createConfig("HighFreqTask", TaskType.IO_BOUND), createProcessor());
+        registry.register(createConfig("BackgroundTask", TaskType.BATCH), createProcessor());
 
         assertEquals(4, registry.getTaskCount());
         assertTrue(registry.isRegistered("InitTask"));
@@ -232,7 +232,7 @@ class TaskRegistryTest {
         TaskRegistry registry = new TaskRegistry();
 
         TestProcessor<String> testProcessor = new TestProcessor<>();
-        TaskConfig config = createConfig("TestTask", TaskType.HIGH_FREQ);
+        TaskConfig config = createConfig("TestTask", TaskType.IO_BOUND);
 
         registry.register(config, testProcessor);
 
@@ -249,7 +249,7 @@ class TaskRegistryTest {
     void shouldReturnUnmodifiableCollectionForGetAllRegistrations() {
         TaskRegistry registry = new TaskRegistry();
 
-        registry.register(createConfig("Task1", TaskType.HIGH_FREQ), createProcessor());
+        registry.register(createConfig("Task1", TaskType.IO_BOUND), createProcessor());
 
         Collection<TaskRegistry.TaskRegistration<?>> registrations = registry.getAllRegistrations();
 
@@ -261,7 +261,7 @@ class TaskRegistryTest {
     void shouldReturnUnmodifiableMapForGetAllMetrics() {
         TaskRegistry registry = new TaskRegistry();
 
-        registry.register(createConfig("Task1", TaskType.HIGH_FREQ), createProcessor());
+        registry.register(createConfig("Task1", TaskType.IO_BOUND), createProcessor());
 
         Map<String, TaskMetrics> metrics = registry.getAllMetrics();
 
@@ -277,7 +277,7 @@ class TaskRegistryTest {
         for (int i = 0; i < 10; i++) {
             final int index = i;
             threads[i] = new Thread(() -> {
-                TaskConfig config = createConfig("ConcurrentTask" + index, TaskType.HIGH_FREQ);
+                TaskConfig config = createConfig("ConcurrentTask" + index, TaskType.IO_BOUND);
                 ITaskProcessor<String> processor = createProcessor();
                 registry.register(config, processor);
             });
@@ -319,7 +319,7 @@ class TaskRegistryTest {
 
         @Override
         public TaskType getTaskType() {
-            return TaskType.HIGH_FREQ;
+            return TaskType.IO_BOUND;
         }
 
         @Override

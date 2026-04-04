@@ -355,25 +355,24 @@ public class BatchDBExecutor {
      * 批量执行结果。
      * Batch execution result.
      */
+    @lombok.Value
+    @lombok.Builder
     public static class BatchResult {
-        public final boolean success;
-        public final int expectedCount;
-        public final int actualCount;
-        public final Exception error;
-
-        private BatchResult(boolean success, int expectedCount, int actualCount, Exception error) {
-            this.success = success;
-            this.expectedCount = expectedCount;
-            this.actualCount = actualCount;
-            this.error = error;
-        }
+        boolean success;
+        int expectedCount;
+        int actualCount;
+        Exception error;
 
         /**
          * 创建成功结果。
          * Create success result.
          */
         public static BatchResult success(int expected, int actual) {
-            return new BatchResult(true, expected, actual, null);
+            return BatchResult.builder()
+                    .success(true)
+                    .expectedCount(expected)
+                    .actualCount(actual)
+                    .build();
         }
 
         /**
@@ -381,7 +380,12 @@ public class BatchDBExecutor {
          * Create failure result.
          */
         public static BatchResult failure(int expected, Exception error) {
-            return new BatchResult(false, expected, 0, error);
+            return BatchResult.builder()
+                    .success(false)
+                    .expectedCount(expected)
+                    .actualCount(0)
+                    .error(error)
+                    .build();
         }
     }
 }

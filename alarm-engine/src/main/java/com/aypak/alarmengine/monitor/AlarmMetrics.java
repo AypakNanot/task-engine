@@ -334,36 +334,20 @@ public class AlarmMetrics {
      * 指标快照
      * Metrics snapshot.
      */
+    @lombok.Value
+    @lombok.Builder
     public static class MetricsSnapshot {
-        public final long incomingCount;
-        public final long successCount;
-        public final long failureCount;
-        public final long droppedCount;
-        public final long qps;
-        public final long avgProcessingRT;
-        public final long avgDBLatency;
-        public final int receiverQueueDepth;
-        public final int totalWorkerQueueDepth;
-        public final double successRate;
-        public final double failureRate;
-
-        public MetricsSnapshot(long incomingCount, long successCount, long failureCount,
-                              long droppedCount, long qps, long avgProcessingRT,
-                              long avgDBLatency, int receiverQueueDepth,
-                              int totalWorkerQueueDepth, double successRate,
-                              double failureRate) {
-            this.incomingCount = incomingCount;
-            this.successCount = successCount;
-            this.failureCount = failureCount;
-            this.droppedCount = droppedCount;
-            this.qps = qps;
-            this.avgProcessingRT = avgProcessingRT;
-            this.avgDBLatency = avgDBLatency;
-            this.receiverQueueDepth = receiverQueueDepth;
-            this.totalWorkerQueueDepth = totalWorkerQueueDepth;
-            this.successRate = successRate;
-            this.failureRate = failureRate;
-        }
+        long incomingCount;
+        long successCount;
+        long failureCount;
+        long droppedCount;
+        long qps;
+        long avgProcessingRT;
+        long avgDBLatency;
+        int receiverQueueDepth;
+        int totalWorkerQueueDepth;
+        double successRate;
+        double failureRate;
 
         @Override
         public String toString() {

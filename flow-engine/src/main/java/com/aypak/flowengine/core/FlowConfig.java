@@ -1,5 +1,7 @@
 package com.aypak.flowengine.core;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +22,7 @@ import java.util.List;
  * @param <K> 分片键类型 / shard key type
  * @param <T> 负载类型 / payload type
  */
+@Getter
 public class FlowConfig<K, T> {
 
     /** 流名称 / Flow name */
@@ -57,72 +60,6 @@ public class FlowConfig<K, T> {
         this.batchTimeoutMs = builder.batchTimeoutMs;
     }
 
-    // ==================== Getters ====================
-
-    /**
-     * 获取流名称。
-     * Get flow name.
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * 获取分片数量。
-     * Get shard count.
-     */
-    public int getShardCount() {
-        return shardCount;
-    }
-
-    /**
-     * 获取队列容量。
-     * Get queue capacity.
-     */
-    public int getQueueCapacity() {
-        return queueCapacity;
-    }
-
-    /**
-     * 获取拒绝策略。
-     * Get rejection policy.
-     */
-    public RejectPolicy getRejectPolicy() {
-        return rejectPolicy;
-    }
-
-    /**
-     * 获取处理节点列表。
-     * Get processing nodes list.
-     */
-    public List<FlowNode<K, T>> getNodes() {
-        return new ArrayList<>(nodes);
-    }
-
-    /**
-     * 是否启用指标。
-     * Whether metrics enabled.
-     */
-    public boolean isMetricsEnabled() {
-        return metricsEnabled;
-    }
-
-    /**
-     * 获取批处理大小。
-     * Get batch size.
-     */
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    /**
-     * 获取批处理超时。
-     * Get batch timeout.
-     */
-    public long getBatchTimeoutMs() {
-        return batchTimeoutMs;
-    }
-
     /**
      * 验证配置。
      * Validate configuration.
@@ -149,8 +86,6 @@ public class FlowConfig<K, T> {
             throw new IllegalArgumentException("Batch timeout must be positive");
         }
     }
-
-    // ==================== Builder ====================
 
     /**
      * 创建配置构建器。

@@ -1,5 +1,8 @@
 package com.aypak.flowengine.core;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>上下文用于在节点之间共享数据和状态。</p>
  * <p>Context is used to share data and state between nodes.</p>
  */
+@Getter
+@Setter
 public class FlowContext {
 
     /** 上下文数据 / Context data */
@@ -26,6 +31,16 @@ public class FlowContext {
 
     /** 节点处理时延 / Node processing latencies */
     private final Map<String, Long> nodeLatencies = new ConcurrentHashMap<>();
+
+    /**
+     * 检查是否应该继续处理（兼容旧代码）。
+     * Check if should continue processing (for backward compatibility).
+     *
+     * @return true 如果应该继续 / true if should continue
+     */
+    public boolean shouldContinue() {
+        return this.shouldContinue;
+    }
 
     /**
      * 设置上下文值。
@@ -104,16 +119,6 @@ public class FlowContext {
     }
 
     /**
-     * 是否应该继续处理。
-     * Whether should continue processing.
-     *
-     * @return true 如果继续 / true if should continue
-     */
-    public boolean shouldContinue() {
-        return shouldContinue;
-    }
-
-    /**
      * 标记为已丢弃。
      * Mark as dropped.
      */
@@ -123,31 +128,11 @@ public class FlowContext {
     }
 
     /**
-     * 是否已丢弃。
-     * Whether dropped.
-     *
-     * @return true 如果已丢弃 / true if dropped
-     */
-    public boolean isDropped() {
-        return dropped;
-    }
-
-    /**
      * 标记为已持久化。
      * Mark as persisted.
      */
     public void markPersisted() {
         this.persisted = true;
-    }
-
-    /**
-     * 是否已持久化。
-     * Whether persisted.
-     *
-     * @return true 如果已持久化 / true if persisted
-     */
-    public boolean isPersisted() {
-        return persisted;
     }
 
     /**

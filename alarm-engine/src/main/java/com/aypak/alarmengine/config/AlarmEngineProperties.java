@@ -1,11 +1,13 @@
 package com.aypak.alarmengine.config;
 
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 告警引擎配置属性
  * Alarm engine configuration properties.
  */
+@Data
 @ConfigurationProperties(prefix = "alarm-engine")
 public class AlarmEngineProperties {
 
@@ -35,78 +37,4 @@ public class AlarmEngineProperties {
 
     /** 监控间隔（秒）/ Monitor interval in seconds */
     private long monitorIntervalSec = 1;
-
-    // Getters and Setters
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public int getWorkerCount() {
-        return workerCount;
-    }
-
-    public void setWorkerCount(int workerCount) {
-        this.workerCount = workerCount;
-    }
-
-    public int getWorkerQueueCapacity() {
-        return workerQueueCapacity;
-    }
-
-    public void setWorkerQueueCapacity(int workerQueueCapacity) {
-        this.workerQueueCapacity = workerQueueCapacity;
-    }
-
-    public int getReceiverQueueCapacity() {
-        return receiverQueueCapacity;
-    }
-
-    public void setReceiverQueueCapacity(int receiverQueueCapacity) {
-        this.receiverQueueCapacity = receiverQueueCapacity;
-    }
-
-    public String getRejectPolicy() {
-        return rejectPolicy;
-    }
-
-    public void setRejectPolicy(String rejectPolicy) {
-        this.rejectPolicy = rejectPolicy;
-    }
-
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    public void setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-    }
-
-    public long getBatchTimeoutMs() {
-        return batchTimeoutMs;
-    }
-
-    public void setBatchTimeoutMs(long batchTimeoutMs) {
-        this.batchTimeoutMs = batchTimeoutMs;
-    }
-
-    public long getShutdownTimeoutSec() {
-        return shutdownTimeoutSec;
-    }
-
-    public void setShutdownTimeoutSec(long shutdownTimeoutSec) {
-        this.shutdownTimeoutSec = shutdownTimeoutSec;
-    }
-
-    public long getMonitorIntervalSec() {
-        return monitorIntervalSec;
-    }
-
-    public void setMonitorIntervalSec(long monitorIntervalSec) {
-        this.monitorIntervalSec = monitorIntervalSec;
-    }
 }

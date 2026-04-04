@@ -1,5 +1,7 @@
 package com.aypak.flowengine.core;
 
+import lombok.Data;
+
 import java.util.UUID;
 
 /**
@@ -24,6 +26,7 @@ import java.util.UUID;
  * @param <K> 分片键类型（如 DeviceID, UserID） / shard key type
  * @param <T> 负载数据类型 / payload type
  */
+@Data
 public class FlowEvent<K, T> {
 
     /** 事件唯一标识 / Unique event ID */
@@ -77,104 +80,6 @@ public class FlowEvent<K, T> {
         this.shardKey = shardKey;
         this.payload = payload;
         this.createTime = System.currentTimeMillis();
-    }
-
-    // ==================== Getters ====================
-
-    /**
-     * 获取事件 ID。
-     * Get event ID.
-     */
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * 获取分片键。
-     * Get shard key.
-     */
-    public K getShardKey() {
-        return shardKey;
-    }
-
-    /**
-     * 获取负载数据。
-     * Get payload data.
-     */
-    public T getPayload() {
-        return payload;
-    }
-
-    /**
-     * 获取创建时间。
-     * Get creation time.
-     */
-    public long getCreateTime() {
-        return createTime;
-    }
-
-    /**
-     * 获取接收时间。
-     * Get receive time.
-     */
-    public long getReceiveTime() {
-        return receiveTime;
-    }
-
-    /**
-     * 设置接收时间。
-     * Set receive time.
-     */
-    public void setReceiveTime(long receiveTime) {
-        this.receiveTime = receiveTime;
-    }
-
-    /**
-     * 获取完成时间。
-     * Get completion time.
-     */
-    public long getCompleteTime() {
-        return completeTime;
-    }
-
-    /**
-     * 设置完成时间。
-     * Set completion time.
-     */
-    public void setCompleteTime(long completeTime) {
-        this.completeTime = completeTime;
-    }
-
-    /**
-     * 获取处理状态。
-     * Get processing status.
-     */
-    public ProcessingStatus getStatus() {
-        return status;
-    }
-
-    /**
-     * 设置处理状态。
-     * Set processing status.
-     */
-    public void setStatus(ProcessingStatus status) {
-        this.status = status;
-    }
-
-    /**
-     * 获取错误消息。
-     * Get error message.
-     */
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    /**
-     * 设置错误消息。
-     * Set error message.
-     */
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.aypak.taskengine.config;
 import com.aypak.taskengine.api.TaskMonitorController;
 import com.aypak.taskengine.executor.AdaptiveScaler;
 import com.aypak.taskengine.executor.DynamicScaler;
+import com.aypak.taskengine.executor.SharedPoolManager;
 import com.aypak.taskengine.executor.TaskEngineImpl;
 import com.aypak.taskengine.monitor.MetricsCollector;
 import com.aypak.taskengine.monitor.QueueMonitor;
@@ -39,6 +40,19 @@ public class TaskEngineAutoConfiguration {
         log.info("Initializing Task Engine with properties: globalMaxThreads={}, scaleFactor={}, scaleUpThreshold={}",
                 properties.getGlobalMaxThreads(), properties.getScaleFactor(), properties.getScaleUpThreshold());
         return new TaskEngineImpl(properties);
+    }
+
+    /**
+     * 获取共享线程池管理器（从 TaskEngineImpl 中提取）。
+     * Get shared pool manager from TaskEngineImpl.
+     *
+     * @param taskEngine 任务引擎 / task engine
+     * @return 共享线程池管理器 / shared pool manager
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SharedPoolManager sharedPoolManager(TaskEngineImpl taskEngine) {
+        return taskEngine.getSharedPoolManager();
     }
 
     /**

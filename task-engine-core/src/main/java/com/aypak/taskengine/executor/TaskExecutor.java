@@ -210,6 +210,15 @@ public class TaskExecutor {
     }
 
     /**
+     * 获取核心线程池大小。
+     * Get core pool size.
+     */
+    public int getCorePoolSize() {
+        ThreadPoolExecutor pool = getThreadPool();
+        return pool != null ? pool.getCorePoolSize() : 0;
+    }
+
+    /**
      * 获取调度器（用于 CRON 任务）。
      * Get scheduler for CRON tasks.
      */

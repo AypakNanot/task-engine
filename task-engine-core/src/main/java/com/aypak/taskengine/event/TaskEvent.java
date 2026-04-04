@@ -4,11 +4,16 @@ import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * 任务执行事件的基类。
- * Base class for task execution events.
+ * 任务执行事件的基类（已废弃）。
+ * Base class for task execution events. DEPRECATED.
+ *
+ * @deprecated 使用 {@link TaskEventRecord} 替代，基于轻量级记录实现，无 Spring 依赖。
+ * <p>
+ * Deprecated: Use {@link TaskEventRecord} instead, which is a lightweight record without Spring dependency.
  *
  * @param <T> 任务负载类型 / task payload type
  */
+@Deprecated(since = "2026-04-04", forRemoval = true)
 @Getter
 public abstract class TaskEvent<T> extends ApplicationEvent {
 

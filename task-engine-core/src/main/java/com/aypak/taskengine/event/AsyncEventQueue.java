@@ -120,7 +120,6 @@ public class AsyncEventQueue<T> {
 
         totalEvents.incrementAndGet();
 
-        // 检查丢弃阈值
         if (discardThreshold > 0 && queue.size() > discardThreshold) {
             discardedEvents.incrementAndGet();
             if (discardedEvents.get() % 1000 == 0) {

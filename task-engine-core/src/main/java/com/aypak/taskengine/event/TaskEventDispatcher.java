@@ -1,8 +1,6 @@
 package com.aypak.taskengine.event;
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.PreDestroy;
 
@@ -27,7 +25,7 @@ import jakarta.annotation.PreDestroy;
 @Slf4j
 public class TaskEventDispatcher {
 
-    private static final Logger eventLog = LoggerFactory.getLogger("TaskEvents");
+    private static final String EVENT_LOG_NAME = "TaskEvents";
 
     private final AsyncEventQueue<TaskSuccessRecord> successQueue;
     private final int successQueueCapacity;
@@ -42,7 +40,6 @@ public class TaskEventDispatcher {
     public TaskEventDispatcher(int successQueueCapacity, long discardThreshold) {
         this.successQueueCapacity = successQueueCapacity;
 
-        // 成功事件队列 - 高频，可丢弃
         this.successQueue = new AsyncEventQueue<>(
                 "success",
                 successQueueCapacity,
@@ -70,8 +67,7 @@ public class TaskEventDispatcher {
      * @param taskType 任务类型 / task type
      */
     public void publishTaskRegistered(String taskName, String taskType) {
-        // 注册事件低频，直接记录日志
-        eventLog.info("TASK_REGISTERED: name={}, type={}", taskName, taskType);
+        org.slf4j.LoggerFactory.getLogger(EVENT_LOG_NAME).info("TASK_REGISTERED: name={}, type={}", taskName, taskType);
         log.debug("Task registered: {} [type={}]", taskName, taskType);
     }
 
@@ -95,16 +91,14 @@ public class TaskEventDispatcher {
      * @param error    异常 / exception
      */
     public void publishTaskFailure(String taskName, Throwable error) {
-        // 失败事件重要，直接记录日志确保不丢失
         String errorMessage = error != null ? error.getMessage() : "Unknown error";
         String errorType = error != null ? error.getClass().getSimpleName() : "Unknown";
-        eventLog.warn("TASK_FAILURE: name={}, type={}, message={}", taskName, errorType, errorMessage);
+        org.slf4j.LoggerFactory.getLogger(EVENT_LOG_NAME).warn("TASK_FAILURE: name={}, type={}, message={}", taskName, errorType, errorMessage);
         log.debug("[{}] Task failed: {}", Thread.currentThread().getName(), errorMessage);
     }
 
     private void handleSuccessEvent(TaskSuccessRecord record) {
-        // 成功事件使用 debug 级别，降低日志开销
-        eventLog.debug("TASK_SUCCESS: name={}, executionTime={}ms",
+        org.slf4j.LoggerFactory.getLogger(EVENT_LOG_NAME).debug("TASK_SUCCESS: name={}, executionTime={}ms",
                 record.getTaskName(), record.getExecutionTimeMs());
     }
 

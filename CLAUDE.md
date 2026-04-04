@@ -99,14 +99,30 @@ mvn compile -pl task-engine-core -am
 
 ## Task Engine Core Module
 
-### Task Types (Physical Isolation)
+### Task Types (Resource-Based Classification)
 
 | Type | Pool Strategy | Thread Naming | Use Case |
 |------|---------------|---------------|----------|
-| `INIT` | core=1, max=CPU, queue=0 | INIT-{name}-{id} | One-time startup |
-| `CRON` | ThreadPoolTaskScheduler | CRON-{name}-{id} | Scheduled jobs |
-| `HIGH_FREQ` | core=CPU*2, max=CPU*4, queue=10000 | HIGH_FREQ-{name}-{id} | High QPS |
-| `BACKGROUND` | core=2, max=4, queue=100 | BACKGROUND-{name}-{id} | Maintenance |
+| `CPU_BOUND` | core=CPUs, max=CPUs*2, queue=100 | CPU-{name}-{id} | Compute-intensive: encryption, compression |
+| `IO_BOUND` | core=16, max=64, queue=1000 | IO-{name}-{id} | I/O operations: network, DB, file |
+| `HYBRID` | core=8, max=16, queue=500 | HYBRID-{name}-{id} | Mixed workload |
+| `SCHEDULED` | ThreadPoolTaskScheduler | CRON-{name}-{id} | Timed/cron tasks |
+| `BATCH` | core=2, max=4, queue=10000 | BATCH-{name}-{id} | Bulk processing: data sync, import/export |
+
+### Operation Guide
+
+**Prohibited**:
+- `new Thread()` - Direct thread creation
+- `Executors.newXXX()` - May create unbounded pools
+- `CompletableFuture.runAsync()` - Uses common pool
+- Direct `ThreadPoolTaskExecutor` injection
+
+**Required**:
+- Always use `taskEngine.register(config, processor)`
+- Always use `taskEngine.execute(taskName, payload)`
+- Configure pools via `application.yml`
+
+See [docs/OPERATION-GUIDE.md](docs/OPERATION-GUIDE.md) for complete rules.
 
 ### Thread Safety
 
@@ -197,10 +213,15 @@ public class MyTaskProcessor implements ITaskProcessor<MyPayload> {
     public String getTaskName() { return "MyTask"; }
 
     @Override
-    public TaskType getTaskType() { return TaskType.HIGH_FREQ; }
-
-    @Override
-    public TaskPriority getPriority() { return TaskPriority.HIGH; }
+    public TaskType getTaskType() {
+        // Choose based on task characteristics:
+        // - CPU_BOUND: compute-intensive (encryption, compression)
+        // - IO_BOUND: I/O operations (network, DB, file)
+        // - HYBRID: mixed workload
+        // - SCHEDULED: timed/cron tasks
+        // - BATCH: bulk processing
+        return TaskType.IO_BOUND;
+    }
 
     @Override
     public void process(MyPayload payload) {
@@ -213,6 +234,12 @@ public class MyTaskProcessor implements ITaskProcessor<MyPayload> {
     }
 }
 ```
+
+**IMPORTANT**:
+- Do NOT create threads directly (`new Thread()`, `Executors.newXXX()`)
+- Do NOT inject ThreadPoolTaskExecutor directly
+- ALWAYS use `taskEngine.register()` and `taskEngine.execute()`
+- See [Operation Guide](docs/OPERATION-GUIDE.md) for detailed rules
 
 ## Known Issues & Solutions
 

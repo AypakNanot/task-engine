@@ -257,13 +257,79 @@ task-engine:
 
 ## REST Endpoints
 
+### Task Monitoring
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/monitor/task/status` | GET | All task metrics |
 | `/monitor/task/status/{name}` | GET | Specific task metrics |
-| `/monitor/task/config/{name}` | PUT | Update pool config |
+| `/monitor/task/registrations` | GET | All task registrations |
+| `/monitor/task/config/{name}` | PUT | Update task pool config |
 | `/monitor/task/metrics/{name}` | DELETE | Reset specific task metrics |
 | `/monitor/task/metrics` | DELETE | Reset all task metrics |
+
+### Thread Pool Monitoring (SHARED Mode)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/monitor/task/pools` | GET | All shared thread pools status |
+| `/monitor/task/pool/{taskType}` | GET | Specific thread pool status by task type |
+
+**Example Response** (`/monitor/task/pools`):
+
+```json
+[
+  {
+    "taskType": "CPU_BOUND",
+    "corePoolSize": 12,
+    "maxPoolSize": 24,
+    "activeThreads": 5,
+    "queueSize": 10,
+    "queueCapacity": 100,
+    "queueUtilization": 10.0,
+    "threadUtilization": 20.8,
+    "completedTaskCount": 0,
+    "shuttingDown": false,
+    "terminated": false
+  },
+  {
+    "taskType": "IO_BOUND",
+    "corePoolSize": 16,
+    "maxPoolSize": 64,
+    "activeThreads": 20,
+    "queueSize": 50,
+    "queueCapacity": 1000,
+    "queueUtilization": 5.0,
+    "threadUtilization": 31.25,
+    "completedTaskCount": 0,
+    "shuttingDown": false,
+    "terminated": false
+  }
+]
+```
+
+**PoolStatsResponse Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `taskType` | String | Task type (CPU_BOUND, IO_BOUND, HYBRID, BATCH) |
+| `corePoolSize` | int | Core thread pool size |
+| `maxPoolSize` | int | Maximum thread pool size |
+| `activeThreads` | int | Currently active threads |
+| `queueSize` | int | Current queue depth |
+| `queueCapacity` | int | Total queue capacity |
+| `queueUtilization` | double | Queue utilization percentage |
+| `threadUtilization` | double | Thread pool utilization percentage |
+| `completedTaskCount` | long | Total completed tasks (shared pools: 0) |
+| `shuttingDown` | boolean | Whether pool is shutting down |
+| `terminated` | boolean | Whether pool has terminated |
+
+**Note**: SCHEDULED type uses ThreadPoolTaskScheduler and is not included in pool monitoring endpoints.
+
+### Health Check
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
 | `/actuator/health` | GET | Health check with task engine status |
 
 ## Common Tasks
